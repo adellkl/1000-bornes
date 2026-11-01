@@ -36,6 +36,15 @@ function normCode(raw: unknown): string {
   return code
 }
 
+/** Empreinte stable d'un document (ordre des clés des cartes normalisé) */
+function print(doc: { uid?: string; cards?: Card[]; deck?: Card[]; discard?: Card[] }): string {
+  const norm = (cards?: Card[]) => cards?.map((c) => [c.id, c.type, c.value])
+  return JSON.stringify([doc.uid ?? null, norm(doc.cards), norm(doc.deck), norm(doc.discard)])
+}
+
+// Empreinte des documents lus : seuls les documents réellement modifiés sont réécrits
+const loaded = new WeakMap<Game, { hands: Record<string, string>; priv: string }>()
+
 async function load(tx: Transaction, code: string): Promise<Game> {
   const ref = roomRef(code)
   const [roomSnap, privSnap, handsSnap] = await Promise.all([
@@ -47,13 +56,17 @@ async function load(tx: Transaction, code: string): Promise<Game> {
   const priv = privSnap.data() ?? {}
   const hands: Record<string, Card[]> = {}
   handsSnap.forEach((d) => (hands[d.id] = (d.data().cards as Card[]) ?? []))
-  return {
+  const g: Game = {
     room: roomSnap.data() as RoomPub,
     deck: (priv.deck as Card[]) ?? [],
     discard: (priv.discard as Card[]) ?? [],
     hands,
     events: [],
   }
+  const handPrints: Record<string, string> = {}
+  handsSnap.forEach((d) => (handPrints[d.id] = print({ uid: d.get('uid'), cards: hands[d.id] })))
+  loaded.set(g, { hands: handPrints, priv: print({ deck: g.deck, discard: g.discard }) })
+  return g
 }
 
 function save(tx: Transaction, code: string, g: Game, previousHandIds: string[] = []) {
@@ -71,9 +84,12 @@ function save(tx: Transaction, code: string, g: Game, previousHandIds: string[] 
     })
   }
   tx.set(ref, { ...g.room, updatedAt: now })
-  tx.set(ref.collection('private').doc('state'), { deck: g.deck, discard: g.discard })
+  const before = loaded.get(g)
+  const priv = { deck: g.deck, discard: g.discard }
+  if (!before || before.priv !== print(priv)) tx.set(ref.collection('private').doc('state'), priv)
   for (const p of g.room.players) {
-    tx.set(ref.collection('hands').doc(p.id), { uid: p.uid, cards: g.hands[p.id] ?? [] })
+    const hand = { uid: p.uid, cards: g.hands[p.id] ?? [] }
+    if (!before || before.hands[p.id] !== print(hand)) tx.set(ref.collection('hands').doc(p.id), hand)
   }
   for (const id of previousHandIds) {
     if (!g.room.players.some((p) => p.id === id)) tx.delete(ref.collection('hands').doc(id))

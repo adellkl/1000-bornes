@@ -9,8 +9,11 @@ import { adminAuth } from './_lib/admin.js'
 type Req = IncomingMessage & { body?: unknown }
 type Res = ServerResponse
 
-function send(res: Res, status: number, body: unknown) {
+function send(res: Res, status: number, body: unknown, timing?: string) {
   res.statusCode = status
+  // Durées internes visibles dans les outils réseau du navigateur (diagnostic de latence)
+  if (timing) res.setHeader('Server-Timing', timing)
+  res.setHeader('Access-Control-Expose-Headers', 'Server-Timing')
   res.setHeader('Content-Type', 'application/json; charset=utf-8')
   res.setHeader('Cache-Control', 'no-store')
   res.end(JSON.stringify(body))
@@ -21,6 +24,7 @@ export default async function handler(req: Req, res: Res) {
   if (req.method === 'GET') return send(res, 200, { ok: true })
   if (req.method !== 'POST') return send(res, 405, { error: 'Méthode non autorisée.' })
 
+  const t0 = performance.now()
   let uid: string
   try {
     const token = (req.headers.authorization ?? '').replace(/^Bearer\s+/i, '')
@@ -33,9 +37,11 @@ export default async function handler(req: Req, res: Res) {
   const action = ACTIONS[String(body.action)]
   if (!action) return send(res, 400, { error: 'Action inconnue.' })
 
+  const t1 = performance.now()
   try {
     const result = await action(uid, body)
-    return send(res, 200, { result: result ?? null })
+    const t2 = performance.now()
+    return send(res, 200, { result: result ?? null }, `auth;dur=${(t1 - t0).toFixed(1)}, game;dur=${(t2 - t1).toFixed(1)}`)
   } catch (e) {
     if (e instanceof GameError) return send(res, 400, { error: e.message })
     console.error(e)
