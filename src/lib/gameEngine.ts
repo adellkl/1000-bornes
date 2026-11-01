@@ -109,3 +109,20 @@ export function describeEvent(event: GameEvent): string {
 }
 
 export const progress = (distance: number) => Math.min(100, (distance / GOAL) * 100)
+
+/**
+ * Joueur suivant prévisible côté client, pour l'annoncer avant la confirmation serveur.
+ * Renvoie null quand le serveur seul peut trancher (botte qui fait rejouer, victoire,
+ * pioche vide, coup invalide).
+ */
+export function predictNextPlayer(state: GameState, me: Player, card: Card, action: 'play' | 'discard'): string | null {
+  if (state.room.deck_count === 0 || state.room.pending_attack) return null
+  if (action === 'play') {
+    if (card.type === 'safety') return null
+    if (card.type === 'distance' && me.distance + Number(card.value) === GOAL) return null
+    if (card.type !== 'attack' && !getPlayOption(card, me, state.players).playable) return null
+  }
+  const sorted = [...state.players].sort((a, b) => a.position - b.position)
+  const i = sorted.findIndex((p) => p.id === me.id)
+  return sorted.length > 1 && i >= 0 ? sorted[(i + 1) % sorted.length].id : null
+}

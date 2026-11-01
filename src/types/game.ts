@@ -37,6 +37,8 @@ export interface Room {
   is_host: boolean
   is_screen_owner: boolean
   host_claim_token: string | null
+  /** Tour suivant annoncé par le joueur précédent, pas encore confirmé par le serveur */
+  predicted?: boolean
 }
 
 export interface Player {

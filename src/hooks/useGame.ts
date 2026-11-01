@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { call } from '../lib/firebase'
+import { predictNextPlayer } from '../lib/gameEngine'
 import type { Player } from '../types/game'
 import { useRealtimeRoom } from './useRealtimeRoom'
 
@@ -7,7 +8,17 @@ const HEARTBEAT_MS = 10000
 
 /** État de la partie + actions du joueur (toutes validées côté serveur). */
 export function useGame(code: string | undefined) {
-  const { state, error, loading, live, refresh } = useRealtimeRoom(code)
+  const { state, error, loading, live, refresh, announce } = useRealtimeRoom(code)
+  const stateRef = useRef(state)
+  stateRef.current = state
+
+  /** Si mon tour n'est encore qu'annoncé, attendre la confirmation du serveur (quelques dizaines de ms) */
+  const waitConfirmed = async () => {
+    const until = Date.now() + 4000
+    while (stateRef.current?.room.predicted && Date.now() < until) {
+      await new Promise((r) => setTimeout(r, 25))
+    }
+  }
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -41,6 +52,7 @@ export function useGame(code: string | undefined) {
         setSentTurn(state?.room.turn_number ?? null)
       }
       try {
+        await waitConfirmed()
         await call(fn, { code, ...args })
         await refresh()
         return true
@@ -48,6 +60,7 @@ export function useGame(code: string | undefined) {
         if (optimisticCard) {
           setHiddenCards((ids) => ids.filter((id) => id !== optimisticCard))
           setSentTurn(null)
+          if (stateRef.current) announce(null, stateRef.current.room.turn_number) // annule l'annonce
         }
         setActionError((e as Error).message)
         await refresh()
@@ -80,6 +93,14 @@ export function useGame(code: string | undefined) {
   )
   const pending = state?.room.pending_attack ?? null
 
+  /** Prévient instantanément le joueur suivant (le serveur confirmera juste après) */
+  const announceNext = (cardId: string, action: 'play' | 'discard') => {
+    const card = serverHand?.find((c) => c.id === cardId)
+    if (!state || !me || !card || state.room.predicted) return
+    const next = predictNextPlayer(state, me, card, action)
+    if (next) announce(next, state.room.turn_number)
+  }
+
   return {
     state,
     loading,
@@ -96,8 +117,14 @@ export function useGame(code: string | undefined) {
       me && state?.room.status === 'playing' && current?.id === me.id && !pending && sentTurn === null,
     ),
     pendingForMe: Boolean(me && pending && pending.target_id === me.id),
-    playCard: (cardId: string, targetId?: string) => run('playcard', { cardId, targetId: targetId ?? null }, cardId),
-    discardCard: (cardId: string) => run('discardcard', { cardId }, cardId),
+    playCard: (cardId: string, targetId?: string) => {
+      announceNext(cardId, 'play')
+      return run('playcard', { cardId, targetId: targetId ?? null }, cardId)
+    },
+    discardCard: (cardId: string) => {
+      announceNext(cardId, 'discard')
+      return run('discardcard', { cardId }, cardId)
+    },
     respondCoupFourre: (accept: boolean) => run('respondcoupfourre', { accept }),
     startGame: () => run('startgame'),
     restartGame: () => run('restartgame'),
