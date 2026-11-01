@@ -4,7 +4,7 @@ Jeu de cartes de course multijoueur, inspiré du Mille Bornes, pensé pour jouer
 
 - **l'ordinateur** affiche le plateau en grand écran, mis à jour en temps réel ;
 - **chaque joueur** rejoint depuis son téléphone (QR code ou lien) et ne voit que **ses propres cartes** ;
-- tout passe par Internet (Supabase) : les joueurs n'ont **pas besoin d'être sur le même Wi-Fi**.
+- tout passe par Internet (Firebase) : les joueurs n'ont **pas besoin d'être sur le même Wi-Fi**.
 
 Visuels de cartes et illustrations originaux (bornes SVG, icônes Lucide) : aucun visuel officiel n'est repris.
 
@@ -14,7 +14,7 @@ Visuels de cartes et illustrations originaux (bornes SVG, icônes Lucide) : aucu
 
 1. [Stack](#stack)
 2. [Installation](#installation)
-3. [Configurer Supabase](#configurer-supabase)
+3. [Configurer Firebase](#configurer-firebase)
 4. [Lancer en local](#lancer-en-local)
 5. [Déployer sur Vercel](#déployer-sur-vercel)
 6. [Comment jouer](#comment-jouer)
@@ -33,141 +33,97 @@ Visuels de cartes et illustrations originaux (bornes SVG, icônes Lucide) : aucu
 | Style | Tailwind CSS v4 (`@tailwindcss/vite`) |
 | Routage | React Router (`src/routes/index.tsx`, pages chargées à la demande) |
 | Animations | Framer Motion |
-| Icônes | Lucide React |
-| QR code | qrcode.react |
-| Backend | Supabase : Postgres + RLS + fonctions RPC + Realtime + authentification anonyme |
-| Hébergement | Vercel |
+| Icônes / QR | Lucide React, qrcode.react |
+| Backend | **Firebase** : Authentication (anonyme), Cloud Firestore (temps réel), Cloud Functions (logique de jeu) |
+| Hébergement | Vercel (front) + Firebase (Firestore, Functions) |
 
 ---
 
 ## Installation
 
-Prérequis : Node.js 20 ou plus, un compte [Supabase](https://supabase.com) (l'offre gratuite suffit).
+Prérequis : Node.js 22, Java 21+ (uniquement pour les émulateurs locaux).
 
 ```bash
 npm install
+npm --prefix functions install
 cp .env.example .env
 ```
 
 ---
 
-## Configurer Supabase
+## Configurer Firebase
 
-### 1. Créer le projet
-
-Sur [supabase.com/dashboard](https://supabase.com/dashboard), cliquez sur **New project**. Choisissez une région proche de vos joueurs (par exemple `eu-west-3`, Paris).
-
-### 2. Activer la connexion anonyme
-
-Les joueurs ne créent pas de compte : chaque appareil reçoit une session anonyme.
-
-**Authentication → Sign In / Providers → Anonymous Sign-Ins → Enable**, puis enregistrez.
-
-> Recommandé : laissez la protection CAPTCHA désactivée pour l'anonyme (sinon il faut l'intégrer côté client), et gardez la limite de débit par défaut.
-
-### 3. Créer le schéma (tables, RLS, RPC, Realtime)
-
-Tout est dans un seul script : [`supabase/migrations/20261101000000_route1000.sql`](supabase/migrations/20261101000000_route1000.sql). Il peut être relancé sans risque (idempotent).
-
-**Option A : éditeur SQL (le plus simple)**
-Ouvrez **SQL Editor → New query**, collez tout le contenu du fichier, puis cliquez sur **Run**.
-
-**Option B : Supabase CLI**
-
-```bash
-supabase login
-supabase link --project-ref <votre-project-ref>
-supabase db push
-```
-
-Le script :
-
-- crée les tables `rooms`, `players`, `game_cards`, `game_events` (plus `room_secrets`, invisible des clients) ;
-- active la RLS partout, **sans aucune politique d'écriture** : les clients ne modifient jamais les tables directement ;
-- crée les fonctions RPC (`create_room`, `join_room`, `start_game`, `play_card`, `discard_card`, `respond_coup_fourre`, `heartbeat`, `kick_player`, `restart_game`, `claim_seat`, `get_game_state`) ;
-- ajoute `rooms` et `game_events` à la publication `supabase_realtime`.
-
-Pour vérifier le Realtime : **Database → Publications → supabase_realtime**. Les tables `rooms` et `game_events` doivent être cochées.
-
-### 4. Récupérer les clés
-
-**Project Settings → API** (ou **Data API**) :
+1. **Créer le projet** : [console.firebase.google.com](https://console.firebase.google.com) → *Ajouter un projet* (ou `npx firebase projects:create`).
+2. **Passer au forfait Blaze** (*Paramètres → Utilisation et facturation*). Les Cloud Functions l'exigent. Le quota gratuit inclus (2 M d'appels par mois) couvre largement des parties entre amis, mais une carte bancaire est demandée.
+3. **Authentication → Sign-in method → Anonyme → Activer.**
+4. **Firestore Database → Créer une base de données** (mode production, région `eur3` ou `europe-west1`).
+5. **Ajouter une application Web** (*Paramètres du projet → Vos applications → </>*) et recopier la configuration dans `.env` :
 
 ```dotenv
-# .env
-VITE_SUPABASE_URL=https://xxxxxxxx.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOi...   # clé « anon » / « publishable », jamais la service_role
-VITE_PUBLIC_URL=                       # optionnel, voir plus bas
+VITE_FIREBASE_API_KEY=AIza...
+VITE_FIREBASE_AUTH_DOMAIN=mon-projet.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=mon-projet
+VITE_FIREBASE_APP_ID=1:123:web:abc
+VITE_FIREBASE_REGION=europe-west1
+VITE_PUBLIC_URL=              # optionnel : URL utilisée dans les QR codes
 ```
 
-La clé anon est publique par nature : la sécurité repose sur la RLS et les fonctions RPC, pas sur le secret de cette clé.
+Ces valeurs sont publiques par nature : la sécurité repose sur les règles Firestore et les Cloud Functions.
 
-| Variable | Obligatoire | Rôle |
-| --- | --- | --- |
-| `VITE_SUPABASE_URL` | oui | URL du projet Supabase |
-| `VITE_SUPABASE_ANON_KEY` | oui | Clé publique anon |
-| `VITE_PUBLIC_URL` | non | URL utilisée dans les liens et QR codes. Par défaut, l'URL de la page courante. |
+6. **Déployer les règles et les fonctions** :
+
+```bash
+npx firebase login
+npx firebase use mon-projet
+npm run deploy:firebase      # = firebase deploy --only firestore,functions
+```
 
 ---
 
 ## Lancer en local
 
+### Avec les émulateurs (aucun compte nécessaire)
+
+```bash
+npm run emulators            # Auth :9099, Firestore :8085, Functions :5001
+npx vite --mode emulators    # dans un 2ᵉ terminal (lit .env.emulators)
+```
+
+### Contre le vrai projet Firebase
+
 ```bash
 npm run dev
 ```
 
-Ouvrez `http://localhost:5173`, cliquez sur **Créer une partie** : l'ordinateur affiche le salon, le code et le QR code.
-
-### Rejoindre avec un vrai téléphone en local
-
-Le QR code reprend l'adresse de la page. Si l'ordinateur est ouvert sur `localhost`, le téléphone ne pourra pas l'atteindre. Deux solutions :
-
-- ouvrez l'ordinateur sur son adresse réseau (Vite l'affiche au démarrage, par exemple `http://192.168.1.20:5173`) ; téléphone et ordinateur doivent alors être sur le même Wi-Fi ;
-- ou déployez sur Vercel (section suivante) : n'importe quel téléphone, en 4G ou sur un autre Wi-Fi, peut rejoindre.
+Pour rejoindre avec un vrai téléphone en local, ouvrez l'ordinateur sur son adresse réseau (`http://192.168.x.x:5173`, affichée par Vite), car le QR code reprend l'adresse de la page. En production (Vercel), n'importe quel téléphone, en 4G ou sur un autre Wi-Fi, peut rejoindre.
 
 ### Simuler plusieurs joueurs dans un seul navigateur
 
-Par défaut, tous les onglets d'un même navigateur partagent la même session (donc le même joueur). Ajoutez `?tab=<nom>` à l'URL pour donner à un onglet sa propre session :
+Ajoutez `?tab=<nom>` à l'URL : l'onglet obtient sa propre session anonyme.
 
 ```
-http://localhost:5173/?tab=alice     → créer la partie
+http://localhost:5173/create?tab=ecran
 http://localhost:5173/join/AB12CD?tab=bruno
-http://localhost:5173/join/AB12CD?tab=chloe
 ```
-
-La session est mémorisée pour l'onglet. Une fenêtre de navigation privée fonctionne aussi.
 
 ### Scripts
 
 | Commande | Effet |
 | --- | --- |
-| `npm run dev` | serveur de développement (accessible sur le réseau local) |
-| `npm run build` | vérification TypeScript et build de production dans `dist/` |
-| `npm run preview` | sert le build localement |
-| `npm run test:db` | tests SQL sur un Postgres local (voir [Tests](#tests)) |
+| `npm run dev` | serveur de développement |
+| `npm run build` | vérification TypeScript et build de production (`dist/`) |
+| `npm test` | tests du moteur de règles (Cloud Functions) |
+| `npm run emulators` | émulateurs Firebase locaux |
+| `npm run deploy:firebase` | déploie les règles Firestore et les Cloud Functions |
 
 ---
 
 ## Déployer sur Vercel
 
-1. Poussez le projet sur GitHub, GitLab ou Bitbucket.
-2. Sur [vercel.com/new](https://vercel.com/new), importez le dépôt. Vercel détecte **Vite** : commande `npm run build`, dossier de sortie `dist`.
-3. Dans **Environment Variables**, ajoutez `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` (et éventuellement `VITE_PUBLIC_URL=https://votre-domaine.vercel.app`).
-4. Cliquez sur **Deploy**.
-
-Avec la CLI :
-
-```bash
-npm i -g vercel
-vercel                      # premier déploiement (aperçu)
-vercel env add VITE_SUPABASE_URL
-vercel env add VITE_SUPABASE_ANON_KEY
-vercel --prod
-```
-
-Le fichier [`vercel.json`](vercel.json) redirige toutes les routes vers `index.html`. Sans lui, un lien direct comme `/join/AB12CD` renverrait une erreur 404.
-
-Aucune configuration d'URL de redirection n'est nécessaire côté Supabase, puisque l'authentification anonyme n'utilise ni e-mail ni OAuth.
+1. Importez le dépôt GitHub sur [vercel.com/new](https://vercel.com/new). Vercel détecte **Vite** (`npm run build`, sortie `dist`).
+2. Ajoutez les variables `VITE_FIREBASE_*` (et `VITE_PUBLIC_URL=https://votre-app.vercel.app`) dans *Settings → Environment Variables*.
+3. Déployez. [`vercel.json`](vercel.json) redirige toutes les routes vers `index.html`.
+4. Dans Firebase, ajoutez le domaine Vercel dans *Authentication → Settings → Authorized domains*.
 
 ---
 
@@ -223,95 +179,47 @@ Aucune configuration d'URL de redirection n'est nécessaire côté Supabase, pui
 ## Architecture et sécurité
 
 ```
-Téléphone / Écran ──RPC (JWT anonyme)──► Fonctions PostgreSQL (security definer)
-        ▲                                     │ valident et appliquent le coup
-        │                                     ▼
-        └──── Realtime : UPDATE rooms.version ◄── tables (RLS, aucune écriture client)
-              puis rechargement via get_game_state (filtré pour l'appelant)
+Téléphone / Écran ──httpsCallable (jeton anonyme)──► Cloud Functions (transaction Firestore)
+        ▲                                               │ valident et appliquent le coup (engine.ts)
+        │                                               ▼
+        └──── onSnapshot (temps réel) ◄──── rooms/{code}             état public
+                                            rooms/{code}/events/*    journal
+                                            rooms/{code}/hands/{id}  main privée (lisible par son seul propriétaire)
+                                            rooms/{code}/private/*   pioche et défausse (jamais lisibles)
 ```
 
-- **Validation 100 % serveur** : tour, propriété de la carte, règles de distance, de limite, de cible, de botte et de coup fourré sont vérifiés en PL/pgSQL. Le moteur TypeScript ([`src/lib/gameEngine.ts`](src/lib/gameEngine.ts)) sert seulement à guider l'interface (cartes grisées, choix de cible).
-- **Mains secrètes** : les cartes sont des lignes de `game_cards`. La politique RLS ne laisse lire que **ses propres** cartes en main et les cartes posées. La pioche et les mains adverses sont illisibles. `get_game_state` ne renvoie que la main de l'appelant ; pour les autres joueurs, seul le **nombre** de cartes est exposé.
-  - `players` ne contient donc pas de colonne `hand` (elle serait lisible par toute la salle) : la main « de chaque joueur » est l'ensemble des lignes `game_cards` où `state = 'hand'`.
-- **Aucune écriture directe** : `INSERT`, `UPDATE` et `DELETE` sont révoqués pour `anon` et `authenticated`, et aucune politique d'écriture n'existe. Les fonctions internes (`_draw`, `_begin_turn`…) ne sont pas exécutables par les clients.
-- **Hôte** : seul l'hôte (l'ordinateur qui a créé la salle, ou le téléphone qui a repris sa place) peut lancer, relancer ou retirer un joueur.
-- **Concurrence** : chaque action verrouille la ligne de la salle (`SELECT … FOR UPDATE`), ce qui évite les doubles coups.
-- **Realtime robuste** : chaque action incrémente `rooms.version`. Les clients abonnés rechargent alors leur état filtré. Si le WebSocket tombe, un rafraîchissement périodique prend le relais (toutes les 3 s hors ligne, 15 s en ligne), avec un rechargement au retour au premier plan.
+- **Validation 100 % serveur** : tour, propriété de la carte, distances, limite, cibles, bottes et coup fourré sont vérifiés dans [`functions/src/engine.ts`](functions/src/engine.ts), exécuté par les Cloud Functions. Le moteur côté navigateur ([`src/lib/gameEngine.ts`](src/lib/gameEngine.ts)) ne fait que griser les cartes.
+- **Mains secrètes** : [`firestore.rules`](firestore.rules) n'autorise la lecture d'une main que si `uid == request.auth.uid`. La pioche (`private/state`) et la présence sont illisibles. Les autres joueurs ne voient que le **nombre** de cartes.
+- **Aucune écriture client** : toutes les règles d'écriture valent `false`. Seules les Functions (SDK Admin) modifient les données.
+- **Hôte** : seul l'hôte (l'ordinateur qui a créé la salle, ou le téléphone qui a repris sa place via son QR personnel) peut lancer, relancer ou retirer un joueur.
+- **Concurrence** : chaque action est une transaction Firestore, ce qui empêche les doubles coups.
 
 ---
 
 ## Tests
 
-### Tests SQL (logique et sécurité)
-
-[`supabase/tests/game_scenario.sql`](supabase/tests/game_scenario.sql) rejoue, sur un Postgres local, un scénario complet à deux joueurs :
-
-- création, arrivée, prénom en double refusé ;
-- lancement réservé à l'hôte ;
-- mains invisibles pour l'adversaire et pour un intrus, pioche invisible, écriture directe interdite ;
-- coup hors tour refusé ;
-- partie entière jouée automatiquement jusqu'à la victoire ;
-- relance réservée à l'hôte ;
-- Limite de vitesse, dépassement de 1 000, plus de deux 200 ;
-- victoire à 1 000 pile ;
-- coup fourré (pioche bonus et rejeu) ;
-- retrait d'un joueur.
-
-```bash
-# Postgres 15 local requis (ex. brew install postgresql@15) ; aucun Docker nécessaire
-npm run test:db
-```
-
-[`supabase/tests/local_bootstrap.sql`](supabase/tests/local_bootstrap.sql) simule le minimum de Supabase : rôles, `auth.uid()` et publication Realtime.
-
-### Test de bout en bout
-
-Scénario validé dans le navigateur avec trois onglets (écran 1440×900 et deux téléphones 375×812) :
-
-- création de la salle ;
-- arrivée de Bruno par lien ;
-- reprise de la place de l'hôte par son QR personnel ;
-- lancement ;
-- Feu vert ;
-- attaque Crevaison avec choix de la cible ;
-- synchronisation de l'écran et des téléphones ;
-- coup fourré avec compte à rebours ;
-- refus d'un dépassement de 1 000 ;
-- victoire à 1 000 pile et classement ;
-- Rejouer ;
-- déconnexion d'un joueur, pause, retrait confirmé par l'hôte ;
-- victoire par forfait et retour au salon.
+- `npm test` : 9 tests du moteur. Ils couvrent l'arrivée des joueurs, le lancement réservé à l'hôte, les coups hors tour, les règles de distance (Feu rouge, limite, 1 000 pile, deux 200 au maximum), les attaques, parades et bottes, le coup fourré et son expiration, la déconnexion, le retrait et le forfait, la reprise de place, et 30 parties complètes jouées automatiquement.
+- **Bout en bout avec les émulateurs** : un écran et deux téléphones dans le navigateur. Le scénario couvre la création, la reprise de place de l'hôte, l'arrivée d'une joueuse, le lancement, le jeu au toucher, une attaque et la synchronisation de l'écran. La sécurité a aussi été vérifiée : lire la main adverse ou la pioche, ou modifier la salle, renvoie **403**.
 
 ---
 
 ## Structure du projet
 
 ```
-src/
-  components/
-    game/      Card, PlayerHand, Board, PlayerStatus, AttackArea (+ bottes), DistanceArea,
-               GameHeader, TurnIndicator, Results (victoire), PauseControl (déconnexions)
-    lobby/     JoinRoom, RoomLobby, QRCodeShare
-    ui/        Button, Logo, Notice, ConfirmDialog, FullScreenMessage
-  pages/       HomePage, CreateGamePage, JoinGamePage, LobbyPage, GamePage, ScreenPage
-  hooks/       useRealtimeRoom (état + Realtime + repli), useGame (actions + présence)
-  lib/         supabase (client, session anonyme, RPC), gameEngine (aide aux règles), deck (catalogue)
-  types/       game.ts
-  routes/      index.tsx
-  App.tsx, main.tsx, index.css (thème : bleu nuit, crème, rouge orangé, jaune signalisation)
-supabase/
-  migrations/  20261101000000_route1000.sql   ← tables, RLS, RPC, Realtime
-  tests/       local_bootstrap.sql, game_scenario.sql, run_local.sh
-vercel.json    réécriture SPA
+src/                 front React (composants, pages, hooks, lib/firebase.ts, lib/gameEngine.ts)
+functions/src/       engine.ts (règles), index.ts (Cloud Functions), engine.test.ts
+firestore.rules      règles de sécurité
+firebase.json        configuration Firebase et émulateurs
+vercel.json          réécriture SPA
 ```
 
 ### Routes
 
 | Route | Écran |
 | --- | --- |
-| `/` | accueil : *Créer une partie* / *Rejoindre une partie* |
+| `/` | accueil |
 | `/create` | prénom de l'hôte + nombre maximum de joueurs |
-| `/join/:roomCode` | rejoindre avec son prénom (`?claim=…` : reprise de place de l'hôte) |
+| `/join/:roomCode` | rejoindre (`?claim=…` : reprise de place de l'hôte) |
 | `/lobby/:roomCode` | salle d'attente mobile |
-| `/game/:roomCode` | interface mobile du joueur (main fixée en bas) |
-| `/screen/:roomCode` | plateau grand écran (salon avec QR, puis table de jeu) |
+| `/game/:roomCode` | interface mobile du joueur |
+| `/screen/:roomCode` | plateau grand écran |

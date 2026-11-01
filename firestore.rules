@@ -1,0 +1,42 @@
+rules_version = '2';
+
+// Route 1000 — les clients LISENT seulement ; toutes les écritures passent par les Cloud Functions.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    match /rooms/{code} {
+      // État public de la salle (joueurs, distances, attaques, nombre de cartes…)
+      allow read: if signedIn();
+      allow write: if false;
+
+      // Journal de bord
+      match /events/{eventId} {
+        allow read: if signedIn();
+        allow write: if false;
+      }
+
+      // Main d'un joueur : lisible uniquement par son propriétaire
+      match /hands/{playerId} {
+        allow read: if signedIn() && resource.data.uid == request.auth.uid;
+        allow write: if false;
+      }
+
+      // Jeton de reprise de place : lisible uniquement par l'ordinateur hôte
+      match /secrets/{doc} {
+        allow read: if signedIn() && resource.data.hostUid == request.auth.uid;
+        allow write: if false;
+      }
+
+      // Pioche, défausse, présence : jamais accessibles au client
+      match /private/{doc} {
+        allow read, write: if false;
+      }
+      match /presence/{uid} {
+        allow read, write: if false;
+      }
+    }
+  }
+}

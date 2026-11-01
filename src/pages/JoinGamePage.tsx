@@ -4,7 +4,7 @@ import { JoinRoom } from '../components/lobby/JoinRoom'
 import { FullScreenMessage } from '../components/ui/FullScreenMessage'
 import { Logo } from '../components/ui/Logo'
 import { useRealtimeRoom } from '../hooks/useRealtimeRoom'
-import { rpc } from '../lib/supabase'
+import { call } from '../lib/firebase'
 
 export default function JoinGamePage() {
   const { roomCode = '' } = useParams()
@@ -20,7 +20,7 @@ export default function JoinGamePage() {
   useEffect(() => {
     if (!claim || claimed.current) return
     claimed.current = true
-    rpc('claim_seat', { p_code: code, p_token: claim })
+    call('claimseat', { code, token: claim })
       .then(() => navigate(`/game/${code}`, { replace: true }))
       .catch((e: Error) => setClaimError(e.message))
   }, [claim, code, navigate])
@@ -59,7 +59,7 @@ export default function JoinGamePage() {
           code={code}
           disabledReason={disabledReason}
           onJoin={async (name) => {
-            await rpc('join_room', { p_code: code, p_name: name })
+            await call('joinroom', { code, name })
             await refresh()
             navigate(`/lobby/${code}`)
           }}

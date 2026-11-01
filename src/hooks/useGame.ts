@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { rpc } from '../lib/supabase'
+import { call } from '../lib/firebase'
 import type { Player } from '../types/game'
 import { useRealtimeRoom } from './useRealtimeRoom'
 
@@ -14,7 +14,7 @@ export function useGame(code: string | undefined) {
   // Présence : battement de cœur régulier (détection des déconnexions côté serveur)
   useEffect(() => {
     if (!code) return
-    const beat = () => rpc('heartbeat', { p_code: code }).catch(() => undefined)
+    const beat = () => call('heartbeat', { code }).catch(() => undefined)
     beat()
     const id = setInterval(beat, HEARTBEAT_MS)
     return () => clearInterval(id)
@@ -32,7 +32,7 @@ export function useGame(code: string | undefined) {
       setBusy(true)
       setActionError(null)
       try {
-        await rpc(fn, { p_code: code, ...args })
+        await call(fn, { code, ...args })
         await refresh()
         return true
       } catch (e) {
@@ -67,12 +67,11 @@ export function useGame(code: string | undefined) {
     hand: state?.me?.hand ?? [],
     isMyTurn: Boolean(me && state?.room.status === 'playing' && current?.id === me.id && !pending),
     pendingForMe: Boolean(me && pending && pending.target_id === me.id),
-    playCard: (cardId: string, targetId?: string) =>
-      run('play_card', { p_card_id: cardId, p_target_id: targetId ?? null }),
-    discardCard: (cardId: string) => run('discard_card', { p_card_id: cardId }),
-    respondCoupFourre: (accept: boolean) => run('respond_coup_fourre', { p_accept: accept }),
-    startGame: () => run('start_game'),
-    restartGame: () => run('restart_game'),
-    kickPlayer: (playerId: string) => run('kick_player', { p_player_id: playerId }),
+    playCard: (cardId: string, targetId?: string) => run('playcard', { cardId, targetId: targetId ?? null }),
+    discardCard: (cardId: string) => run('discardcard', { cardId }),
+    respondCoupFourre: (accept: boolean) => run('respondcoupfourre', { accept }),
+    startGame: () => run('startgame'),
+    restartGame: () => run('restartgame'),
+    kickPlayer: (playerId: string) => run('kickplayer', { playerId }),
   }
 }

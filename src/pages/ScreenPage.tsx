@@ -13,7 +13,7 @@ import { FullScreenMessage } from '../components/ui/FullScreenMessage'
 import { Logo } from '../components/ui/Logo'
 import { Notice } from '../components/ui/Notice'
 import { useGame } from '../hooks/useGame'
-import { publicUrl } from '../lib/supabase'
+import { publicUrl } from '../lib/firebase'
 import type { GameState } from '../types/game'
 
 /** QR personnel de l'hôte : transfère sa place de joueur sur son téléphone */

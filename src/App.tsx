@@ -1,5 +1,5 @@
 import { RouterProvider } from 'react-router-dom'
-import { isSupabaseConfigured } from './lib/supabase'
+import { isFirebaseConfigured } from './lib/firebase'
 import { router } from './routes'
 
 function MissingConfig() {
@@ -9,9 +9,8 @@ function MissingConfig() {
         <h1 className="font-display text-2xl text-signal-400">Configuration requise</h1>
         <p className="mt-3 text-sm text-cream-200">
           Copiez <code className="rounded bg-night-900 px-1">.env.example</code> en{' '}
-          <code className="rounded bg-night-900 px-1">.env</code> et renseignez{' '}
-          <code className="rounded bg-night-900 px-1">VITE_SUPABASE_URL</code> et{' '}
-          <code className="rounded bg-night-900 px-1">VITE_SUPABASE_ANON_KEY</code>, puis relancez le serveur.
+          <code className="rounded bg-night-900 px-1">.env</code> et renseignez la configuration Firebase{' '}
+          (<code className="rounded bg-night-900 px-1">VITE_FIREBASE_*</code>), puis relancez le serveur.
         </p>
       </div>
     </main>
@@ -19,5 +18,5 @@ function MissingConfig() {
 }
 
 export default function App() {
-  return isSupabaseConfigured ? <RouterProvider router={router} /> : <MissingConfig />
+  return isFirebaseConfigured ? <RouterProvider router={router} /> : <MissingConfig />
 }

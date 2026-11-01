@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
 import { Logo } from '../components/ui/Logo'
 import { Notice } from '../components/ui/Notice'
-import { rpc } from '../lib/supabase'
+import { call } from '../lib/firebase'
 
 const NAME_KEY = 'route1000-name'
 
@@ -22,7 +22,7 @@ export default function CreateGamePage() {
     setError(null)
     try {
       localStorage.setItem(NAME_KEY, name.trim())
-      const code = await rpc<string>('create_room', { p_name: name.trim(), p_max_players: maxPlayers })
+      const code = await call<string>('createroom', { name: name.trim(), maxPlayers })
       navigate(`/screen/${code}`)
     } catch (err) {
       setError((err as Error).message)
