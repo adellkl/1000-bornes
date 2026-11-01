@@ -1,6 +1,7 @@
-import { collection, doc, limit, onSnapshot, orderBy, query, setDoc } from 'firebase/firestore'
+import { onValue, ref as dbRef, set } from 'firebase/database'
+import { collection, doc, limit, onSnapshot, orderBy, query } from 'firebase/firestore'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { db, ensureSession } from '../lib/firebase'
+import { db, ensureSession, rtdb } from '../lib/firebase'
 import type { Card, GameEvent, GameState, Player } from '../types/game'
 
 interface RoomDoc {
@@ -103,9 +104,12 @@ export function useRealtimeRoom(code: string | undefined) {
           .reverse(),
       ),
     )
-    const offLive = onSnapshot(
-      collection(ref, 'live'),
-      (snap) => setAnnounces(snap.docs.map((d) => ({ by: d.id, ...(d.data() as Omit<Announce, 'by'>) }))),
+    const offLive = onValue(
+      dbRef(rtdb, `live/${code}`),
+      (snap) => {
+        const val = (snap.val() ?? {}) as Record<string, Omit<Announce, 'by'>>
+        setAnnounces(Object.entries(val).map(([by, a]) => ({ by, nextPlayerId: a.nextPlayerId ?? null, turn: a.turn, at: a.at })))
+      },
       () => setAnnounces([]),
     )
     return () => {
@@ -119,7 +123,7 @@ export function useRealtimeRoom(code: string | undefined) {
   const announce = useCallback(
     (nextPlayerId: string | null, turn: number) => {
       if (!code || !uid) return
-      setDoc(doc(db, 'rooms', code, 'live', uid), { nextPlayerId, turn, at: Date.now() }).catch(() => undefined)
+      set(dbRef(rtdb, `live/${code}/${uid}`), { nextPlayerId, turn, at: Date.now() }).catch(() => undefined)
     },
     [code, uid],
   )

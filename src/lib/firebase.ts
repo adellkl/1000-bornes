@@ -7,6 +7,7 @@ import {
   setPersistence,
   signInAnonymously,
 } from 'firebase/auth'
+import { connectDatabaseEmulator, getDatabase } from 'firebase/database'
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore'
 
 const env = import.meta.env
@@ -27,11 +28,17 @@ const app = initializeApp({
 })
 export const auth = getAuth(app)
 export const db = getFirestore(app)
+/** Realtime Database : canal ultra-rapide pour annoncer le tour suivant */
+export const rtdb = getDatabase(
+  app,
+  useEmulators ? `http://${window.location.hostname}:9000/?ns=${config.projectId || 'demo-route-1000'}` : (env.VITE_FIREBASE_DATABASE_URL as string | undefined),
+)
 
 if (useEmulators) {
   const host = window.location.hostname
   connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true })
   connectFirestoreEmulator(db, host, 8085)
+  connectDatabaseEmulator(rtdb, host, 9000)
 }
 
 /**

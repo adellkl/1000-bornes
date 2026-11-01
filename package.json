@@ -8,10 +8,10 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "emulators": "firebase emulators:start --only auth,firestore --project demo-route-1000",
+    "emulators": "firebase emulators:start --only auth,firestore,database --project demo-route-1000",
     "dev:emulators": "vite --mode emulators",
     "test": "tsx --test api/_lib/engine.test.ts",
-    "deploy:firebase": "firebase deploy --only firestore",
+    "deploy:firebase": "firebase deploy --only firestore,database",
     "dev:api": "FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 FIREBASE_PROJECT_ID=demo-route-1000 tsx watch scripts/dev-api.ts",
     "setup:key": "bash scripts/setup-service-account.sh"
   },

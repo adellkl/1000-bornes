@@ -30,17 +30,6 @@ service cloud.firestore {
         allow write: if false;
       }
 
-      // Annonce instantanée du tour suivant (indicative : le serveur reste l'arbitre).
-      // Chacun n'écrit que la sienne, avec des champs strictement contrôlés.
-      match /live/{uid} {
-        allow read: if signedIn();
-        allow write: if signedIn() && request.auth.uid == uid
-          && request.resource.data.keys().hasOnly(['nextPlayerId', 'turn', 'at'])
-          && (request.resource.data.nextPlayerId == null || request.resource.data.nextPlayerId is string)
-          && request.resource.data.turn is int
-          && request.resource.data.at is int;
-      }
-
       // Pioche, défausse, présence : jamais accessibles au client
       match /private/{doc} {
         allow read, write: if false;

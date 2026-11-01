@@ -1,0 +1,19 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "live": {
+      "$code": {
+        ".read": "auth != null",
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.hasChildren(['turn', 'at']) && newData.child('turn').isNumber() && newData.child('at').isNumber()",
+          "nextPlayerId": { ".validate": "newData.isString() && newData.val().length < 64" },
+          "turn": { ".validate": true },
+          "at": { ".validate": true },
+          "$other": { ".validate": false }
+        }
+      }
+    }
+  }
+}
