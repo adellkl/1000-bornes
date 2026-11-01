@@ -45,6 +45,7 @@ export default defineConfig({
       },
     }),
   ],
-  server: { host: true },
+  // En local, /api est servi par scripts/dev-api.ts (npm run dev:api) ; en production par Vercel
+  server: { host: true, proxy: { '/api': 'http://localhost:3001' } },
   build: { chunkSizeWarningLimit: 800 },
 })

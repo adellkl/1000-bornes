@@ -28,5 +28,4 @@ dist-ssr
 # Firebase
 .firebase/
 *-debug.log
-functions/lib
 .vercel

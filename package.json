@@ -8,13 +8,15 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "emulators": "npm --prefix functions run build && firebase emulators:start --project demo-route-1000",
-    "dev:emulators": "VITE_FIREBASE_EMULATORS=true VITE_FIREBASE_PROJECT_ID=demo-route-1000 vite",
-    "test": "npm --prefix functions test",
-    "deploy:firebase": "firebase deploy --only firestore,functions"
+    "emulators": "firebase emulators:start --only auth,firestore --project demo-route-1000",
+    "dev:emulators": "vite --mode emulators",
+    "test": "tsx --test api/_lib/engine.test.ts",
+    "deploy:firebase": "firebase deploy --only firestore",
+    "dev:api": "FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 FIREBASE_PROJECT_ID=demo-route-1000 tsx watch scripts/dev-api.ts"
   },
   "dependencies": {
     "firebase": "^13.1.0",
+    "firebase-admin": "^14.5.0",
     "framer-motion": "^14.9.0",
     "lucide-react": "^1.66.0",
     "qrcode.react": "^4.2.0",
@@ -32,6 +34,7 @@
     "firebase-tools": "^15.34.2",
     "oxlint": "^1.89.0",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
     "typescript": "~7.0.2",
     "vite": "^8.3.5",
     "vite-plugin-pwa": "^2.0.0"

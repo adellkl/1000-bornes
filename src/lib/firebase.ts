@@ -8,7 +8,6 @@ import {
   signInAnonymously,
 } from 'firebase/auth'
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore'
-import { connectFunctionsEmulator, getFunctions, httpsCallable } from 'firebase/functions'
 
 const env = import.meta.env
 const config = {
@@ -28,13 +27,11 @@ const app = initializeApp({
 })
 export const auth = getAuth(app)
 export const db = getFirestore(app)
-const functions = getFunctions(app, (env.VITE_FIREBASE_REGION as string | undefined) || 'europe-west1')
 
 if (useEmulators) {
   const host = window.location.hostname
   connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true })
   connectFirestoreEmulator(db, host, 8085)
-  connectFunctionsEmulator(functions, host, 5001)
 }
 
 /**
@@ -73,21 +70,26 @@ export function ensureSession(): Promise<string> {
   return sessionPromise
 }
 
-/** Appelle une Cloud Function de jeu (validée côté serveur) avec un message d'erreur en français. */
-export async function call<T = unknown>(name: string, data: Record<string, unknown>): Promise<T> {
+/**
+ * Appelle le serveur de jeu (fonction Vercel /api/game, gratuite) qui valide le coup
+ * côté serveur. Renvoie un message d'erreur en français.
+ */
+export async function call<T = unknown>(action: string, data: Record<string, unknown>): Promise<T> {
   await ensureSession()
+  const token = await auth.currentUser!.getIdToken()
+  let res: Response
   try {
-    const result = await httpsCallable(functions, name)(data)
-    return result.data as T
-  } catch (e) {
-    const err = e as { code?: string; message?: string }
-    if (err.code === 'functions/unavailable')
-      throw new Error('Connexion au serveur impossible. Vérifiez votre réseau.')
-    // Fonction absente (non déployée) ou réseau coupé : le SDK ne renvoie que « internal »
-    if (err.code === 'functions/internal' && (!err.message || err.message === 'internal'))
-      throw new Error('Serveur de jeu injoignable : les Cloud Functions ne sont pas déployées ou le réseau est coupé.')
-    throw new Error(err.message || 'Erreur inattendue, réessayez.')
+    res = await fetch('/api/game', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action, ...data }),
+    })
+  } catch {
+    throw new Error('Connexion au serveur impossible. Vérifiez votre réseau.')
   }
+  const body = (await res.json().catch(() => ({}))) as { result?: T; error?: string }
+  if (!res.ok) throw new Error(body.error || 'Serveur de jeu injoignable, réessayez.')
+  return body.result as T
 }
 
 /** URL publique utilisée pour les liens et QR codes */
