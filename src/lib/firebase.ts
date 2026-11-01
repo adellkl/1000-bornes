@@ -81,8 +81,11 @@ export async function call<T = unknown>(name: string, data: Record<string, unkno
     return result.data as T
   } catch (e) {
     const err = e as { code?: string; message?: string }
-    if (err.code === 'functions/unavailable' || err.code === 'functions/internal' && !err.message)
+    if (err.code === 'functions/unavailable')
       throw new Error('Connexion au serveur impossible. Vérifiez votre réseau.')
+    // Fonction absente (non déployée) ou réseau coupé : le SDK ne renvoie que « internal »
+    if (err.code === 'functions/internal' && (!err.message || err.message === 'internal'))
+      throw new Error('Serveur de jeu injoignable : les Cloud Functions ne sont pas déployées ou le réseau est coupé.')
     throw new Error(err.message || 'Erreur inattendue, réessayez.')
   }
 }
