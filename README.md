@@ -8,6 +8,8 @@ Jeu de cartes de course multijoueur, inspiré du Mille Bornes, pensé pour jouer
 
 Visuels de cartes et illustrations originaux (bornes SVG, icônes Lucide) : aucun visuel officiel n'est repris.
 
+**En ligne** : https://route-1000-coral.vercel.app · Firebase : projet `route-1000-jeu` (région `europe-west1`, Firestore `eur3`) · Code : https://github.com/adellkl/1000-bornes
+
 ---
 
 ## Sommaire
