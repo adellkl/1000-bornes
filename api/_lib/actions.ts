@@ -19,6 +19,7 @@ import {
   startGame,
   syncPublic,
   updatePresence,
+  DISCONNECT_MS,
   type Card,
   type Game,
   type RoomPub,
@@ -128,7 +129,23 @@ export const ACTIONS: Record<string, (uid: string, data: Data) => Promise<unknow
   heartbeat: async (uid, data) => {
     const code = normCode(data.code)
     const presence = roomRef(code).collection('presence')
-    await presence.doc(uid).set({ lastSeen: Date.now() })
+    const [, roomSnap, seen] = await Promise.all([
+      presence.doc(uid).set({ lastSeen: Date.now() }),
+      roomRef(code).get(),
+      presence.get(),
+    ])
+    // Lecture simple d'abord : on ne verrouille la salle (transaction) que si
+    // quelque chose doit vraiment changer, pour ne jamais ralentir les coups des joueurs.
+    const room = roomSnap.data() as RoomPub | undefined
+    if (!room) throw new GameError('Salle introuvable.')
+    const now = Date.now()
+    const lastSeenMap: Record<string, number> = { [uid]: now }
+    seen.forEach((d) => (lastSeenMap[d.id] ??= d.get('lastSeen') as number))
+    const needsUpdate =
+      room.players.some((p) => p.isConnected !== now - (lastSeenMap[p.uid] ?? 0) < DISCONNECT_MS) ||
+      (room.status === 'playing' && room.pendingAttack !== null && room.pendingAttack.expiresAt <= now)
+    if (!needsUpdate) return null
+
     return db.runTransaction(async (tx) => {
       const [g, seenSnap] = await Promise.all([load(tx, code), tx.get(presence)])
       const lastSeen: Record<string, number> = {}

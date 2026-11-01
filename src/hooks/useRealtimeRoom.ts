@@ -40,6 +40,8 @@ export function useRealtimeRoom(code: string | undefined) {
   const [live, setLive] = useState(false)
 
   useEffect(() => {
+    // Préchauffe le serveur de jeu pendant le chargement de la page
+    fetch('/api/game').catch(() => undefined)
     ensureSession()
       .then(setUid)
       .catch((e: Error) => {

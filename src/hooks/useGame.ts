@@ -26,16 +26,29 @@ export function useGame(code: string | undefined) {
     return () => clearTimeout(id)
   }, [actionError])
 
+  // Interface optimiste : la carte jouée quitte la main tout de suite et le tour est
+  // considéré comme terminé sans attendre le serveur ; tout est annulé en cas de refus.
+  const [hiddenCards, setHiddenCards] = useState<string[]>([])
+  const [sentTurn, setSentTurn] = useState<number | null>(null)
+
   const run = useCallback(
-    async (fn: string, args: Record<string, unknown> = {}) => {
+    async (fn: string, args: Record<string, unknown> = {}, optimisticCard?: string) => {
       if (!code) return false
       setBusy(true)
       setActionError(null)
+      if (optimisticCard) {
+        setHiddenCards((ids) => [...ids, optimisticCard])
+        setSentTurn(state?.room.turn_number ?? null)
+      }
       try {
         await call(fn, { code, ...args })
         await refresh()
         return true
       } catch (e) {
+        if (optimisticCard) {
+          setHiddenCards((ids) => ids.filter((id) => id !== optimisticCard))
+          setSentTurn(null)
+        }
         setActionError((e as Error).message)
         await refresh()
         return false
@@ -43,8 +56,22 @@ export function useGame(code: string | undefined) {
         setBusy(false)
       }
     },
-    [code, refresh],
+    [code, refresh, state?.room.turn_number],
   )
+
+  // Nettoyage dès que l'état serveur a pris le relais
+  const serverHand = state?.me?.hand
+  useEffect(() => {
+    if (!serverHand) return
+    setHiddenCards((ids) => {
+      const kept = ids.filter((id) => serverHand.some((c) => c.id === id))
+      return kept.length === ids.length ? ids : kept
+    })
+  }, [serverHand])
+  const turnNumber = state?.room.turn_number
+  useEffect(() => {
+    if (sentTurn !== null && turnNumber !== sentTurn) setSentTurn(null)
+  }, [turnNumber, sentTurn])
 
   const me: Player | null = useMemo(() => state?.players.find((p) => p.is_me) ?? null, [state])
   const current = useMemo(
@@ -64,11 +91,13 @@ export function useGame(code: string | undefined) {
     refresh,
     me,
     current,
-    hand: state?.me?.hand ?? [],
-    isMyTurn: Boolean(me && state?.room.status === 'playing' && current?.id === me.id && !pending),
+    hand: (serverHand ?? []).filter((c) => !hiddenCards.includes(c.id)),
+    isMyTurn: Boolean(
+      me && state?.room.status === 'playing' && current?.id === me.id && !pending && sentTurn === null,
+    ),
     pendingForMe: Boolean(me && pending && pending.target_id === me.id),
-    playCard: (cardId: string, targetId?: string) => run('playcard', { cardId, targetId: targetId ?? null }),
-    discardCard: (cardId: string) => run('discardcard', { cardId }),
+    playCard: (cardId: string, targetId?: string) => run('playcard', { cardId, targetId: targetId ?? null }, cardId),
+    discardCard: (cardId: string) => run('discardcard', { cardId }, cardId),
     respondCoupFourre: (accept: boolean) => run('respondcoupfourre', { accept }),
     startGame: () => run('startgame'),
     restartGame: () => run('restartgame'),

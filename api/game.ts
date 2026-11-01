@@ -17,6 +17,8 @@ function send(res: Res, status: number, body: unknown) {
 }
 
 export default async function handler(req: Req, res: Res) {
+  // GET : préchauffage (réveille la fonction et le SDK Admin avant le premier coup)
+  if (req.method === 'GET') return send(res, 200, { ok: true })
   if (req.method !== 'POST') return send(res, 405, { error: 'Méthode non autorisée.' })
 
   let uid: string
