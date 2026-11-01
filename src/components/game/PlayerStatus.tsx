@@ -29,63 +29,61 @@ export function playerColor(player: Player) {
 export function PlayerStatus({ player, active, isHost, variant = 'screen', onClick, highlight }: PlayerStatusProps) {
   const status = statusLabel(player)
   const color = playerColor(player)
-  const large = variant === 'screen'
+  if (variant === 'compact') return <CompactStatus player={player} active={active} isHost={isHost} />
 
-  if (!large) return <CompactStatus player={player} active={active} isHost={isHost} />
-
+  // Panneau « grand écran » : s'adapte à sa propre largeur (container queries),
+  // de la petite tablette à la TV 4K.
   return (
     <motion.div
       layout
       onClick={onClick}
-      animate={{ scale: active && large ? 1.02 : 1 }}
-      className={`relative overflow-hidden rounded-3xl bg-night-800/90 ring-1 transition-shadow ${
+      animate={{ scale: active ? 1.015 : 1 }}
+      className={`@container relative flex h-full min-w-0 flex-col justify-between gap-3 overflow-hidden rounded-3xl bg-night-800/90 p-4 ring-1 transition-shadow @xs:p-5 ${
         active ? 'ring-2 ring-signal-400 shadow-[0_0_0_6px_rgb(246_194_28/0.12),0_20px_50px_-20px_rgb(246_194_28/0.45)]' : 'ring-cream-100/10'
-      } ${highlight ? 'ring-2 ring-flame-500' : ''} ${large ? 'p-5' : 'p-3.5'} ${onClick ? 'cursor-pointer' : ''}`}
+      } ${highlight ? 'ring-2 ring-flame-500' : ''} ${onClick ? 'cursor-pointer' : ''}`}
     >
       <span className="absolute inset-y-0 left-0 w-1.5" style={{ background: color }} />
 
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <span
-            className={`grid shrink-0 place-items-center rounded-full font-display text-night-900 ${large ? 'size-11 text-lg' : 'size-8 text-sm'}`}
+            className="grid size-9 shrink-0 place-items-center rounded-full font-display text-base text-night-900 @xs:size-11 @xs:text-lg @sm:size-14 @sm:text-2xl"
             style={{ background: color }}
           >
             {player.name.slice(0, 1).toUpperCase()}
           </span>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className={`truncate font-extrabold ${large ? 'text-xl' : 'text-base'}`}>{player.name}</span>
-              {isHost && <Crown className="size-4 shrink-0 text-signal-400" aria-label="Hôte" />}
+              <span className="truncate text-base font-extrabold @xs:text-xl @sm:text-3xl">{player.name}</span>
+              {isHost && <Crown className="size-4 shrink-0 text-signal-400 @sm:size-6" aria-label="Hôte" />}
               {player.is_me && <span className="rounded bg-cream-100/10 px-1.5 text-[0.65rem] font-bold">vous</span>}
             </div>
-            <span className={`mt-0.5 inline-flex rounded-full px-2 py-0.5 text-[0.7rem] font-extrabold ring-1 ${TONES[status.tone]}`}>
+            <span className={`mt-0.5 inline-flex rounded-full px-2 py-0.5 text-[0.7rem] font-extrabold ring-1 @sm:text-sm ${TONES[status.tone]}`}>
               {status.label}
             </span>
           </div>
         </div>
-        <div className="text-right">
+        <div className="shrink-0 text-right">
           <motion.div
             key={player.distance}
             initial={{ scale: 1.4, color: '#f6c21c' }}
             animate={{ scale: 1, color: '#f4ead5' }}
-            className={`font-display leading-none ${large ? 'text-4xl' : 'text-2xl'}`}
+            className="font-display text-3xl leading-none @xs:text-4xl @sm:text-6xl"
           >
             {player.distance}
           </motion.div>
-          <div className="text-[0.65rem] font-bold uppercase tracking-wider text-night-300">bornes</div>
+          <div className="text-[0.65rem] font-bold uppercase tracking-wider text-night-300 @sm:text-xs">bornes</div>
         </div>
       </div>
 
-      <div className={large ? 'mt-4' : 'mt-3'}>
-        <DistanceArea distance={player.distance} color={color} large={large} />
+      <DistanceArea distance={player.distance} color={color} large />
+
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <AttackArea player={player} />
+        <SafetyRow player={player} />
       </div>
 
-      <div className={`flex items-end justify-between gap-3 ${large ? 'mt-4' : 'mt-3'}`}>
-        <AttackArea player={player} size={large ? 'sm' : 'xs'} />
-        <SafetyRow player={player} compact={!large} />
-      </div>
-
-      <div className="mt-3 flex items-center gap-3 text-[0.7rem] font-bold text-night-300">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem] font-bold text-night-300 @sm:text-sm">
         <span className="inline-flex items-center gap-1">
           <Layers className="size-3.5" /> {player.hand_count} cartes
         </span>

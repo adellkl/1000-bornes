@@ -129,6 +129,17 @@ http://localhost:5173/join/AB12CD?tab=bruno
 
 ---
 
+## Application installable (PWA) et responsive
+
+- **Installable** : manifeste, icônes (dont maskable et Apple), service worker (`vite-plugin-pwa`). Sur Android et ordinateur, le bouton *Installer l'application* de l'accueil lance l'installation ; sur iPhone, il explique *Partager → Sur l'écran d'accueil*. L'appli s'ouvre alors en plein écran, en respectant l'encoche.
+- **Responsive** : vérifié sans aucun débordement de 320 px (iPhone SE) à 1920 px (TV), téléphone à l'horizontale compris.
+  - **Téléphone vertical** : main en grille de 4 colonnes.
+  - **Tablette ou téléphone à l'horizontale** : main sur une seule ligne, adversaires sur deux colonnes.
+  - **Plateau grand écran** : calé sur la hauteur de l'écran, sans défilement à partir de 1280 px. Les panneaux joueurs s'adaptent à leur propre largeur (*container queries*) et grossissent sur TV.
+- Les icônes se régénèrent à partir de `public/icon.svg` avec `npx pwa-assets-generator`.
+
+---
+
 ## Comment jouer
 
 1. **Ordinateur** : *Créer une partie*. Saisissez votre prénom et le nombre maximum de joueurs (2 à 6).

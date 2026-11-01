@@ -45,17 +45,17 @@ export function PlayerHand({ hand, me, players, canAct, busy, onPlay, onDiscard,
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-cream-100/10 bg-night-950/95 backdrop-blur">
-      <div className="mx-auto max-w-lg px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-2.5">
-        <div className="mb-2 flex h-9 items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-[0.18em] text-night-300">
+    <div className="shrink-0 border-t border-cream-100/10 bg-night-950/95">
+      <div className="mx-auto max-w-lg px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-2.5 sm:max-w-3xl short:max-w-xl short:pb-[max(env(safe-area-inset-bottom),0.5rem)] short:pt-1.5">
+        <div className="mb-2 flex h-9 items-center justify-between gap-2 short:mb-1.5 short:h-8">
+          <span className="truncate text-xs font-bold uppercase tracking-[0.18em] text-night-300">
             {discardMode ? 'Choisissez la carte' : canAct ? 'Touchez pour jouer' : 'Votre main'}
           </span>
           <button
             type="button"
             disabled={!canAct}
             onClick={() => setDiscardMode((v) => !v)}
-            className={`inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-xs font-extrabold transition-colors disabled:opacity-30 ${
+            className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-xs font-extrabold transition-colors disabled:opacity-30 ${
               discardMode ? 'bg-flame-500 text-cream-50' : 'bg-night-800 text-cream-100 ring-1 ring-cream-100/15'
             }`}
           >
@@ -64,7 +64,7 @@ export function PlayerHand({ hand, me, players, canAct, busy, onPlay, onDiscard,
           </button>
         </div>
 
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-8 short:grid-cols-8 short:gap-1.5">
           <AnimatePresence initial={false} mode="popLayout">
             {hand.map((card) => (
               <motion.div

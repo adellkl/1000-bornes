@@ -31,7 +31,7 @@ export default function CreateGamePage() {
   }
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-asphalt px-5 py-10">
+    <main className="grid min-h-app place-items-center bg-asphalt px-5 py-10">
       <form onSubmit={submit} className="flex w-full max-w-md flex-col gap-6 rounded-[2rem] bg-night-800/85 p-7 ring-1 ring-cream-100/10">
         <div className="flex items-center justify-between">
           <Link to="/" aria-label="Retour" className="grid size-10 place-items-center rounded-full bg-night-700 hover:bg-night-600">

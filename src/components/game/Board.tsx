@@ -24,14 +24,15 @@ export function Board({ state }: { state: GameState }) {
     return () => clearTimeout(id)
   }, [lastCardEvent?.id])
 
-  const cols = players.length <= 2 ? 'grid-cols-1 xl:grid-cols-2' : players.length <= 4 ? 'grid-cols-2' : 'grid-cols-2 2xl:grid-cols-3'
+  // 2 à 4 joueurs : 2 colonnes ; 5-6 joueurs : 3 colonnes dès que la place le permet
+  const cols = players.length >= 5 ? 'md:grid-cols-2 lg:grid-cols-3' : 'md:grid-cols-2'
   const highlightId = flash?.action === 'play_attack' ? flash.payload.target_id : flash?.player_id
 
   return (
-    <div className="grid flex-1 gap-6 px-8 pb-8 lg:grid-cols-[1fr_340px]">
-      <section className="flex flex-col gap-5">
+    <div className="grid flex-1 gap-4 px-4 pb-4 sm:px-6 xl:min-h-0 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_400px] 2xl:gap-8 2xl:px-10 2xl:pb-8">
+      <section className="flex min-w-0 flex-col gap-4 xl:min-h-0 2xl:gap-6">
         <TurnIndicator current={current} pending={room.pending_attack} players={players} large />
-        <div className={`grid content-start gap-5 ${cols}`}>
+        <div className={`grid gap-4 xl:min-h-0 xl:flex-1 xl:auto-rows-fr 2xl:gap-6 ${cols}`}>
           {players.map((p) => (
             <PlayerStatus
               key={p.id}
@@ -44,22 +45,25 @@ export function Board({ state }: { state: GameState }) {
         </div>
       </section>
 
-      <aside className="flex flex-col gap-5">
-        <div className="rounded-3xl bg-night-950/50 p-5 ring-1 ring-cream-100/10">
+      <aside className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)] xl:flex xl:min-h-0 xl:flex-col 2xl:gap-6">
+        <div className="rounded-3xl bg-night-950/50 p-4 ring-1 ring-cream-100/10 2xl:p-6">
           <div className="flex items-end justify-around gap-4">
             <div className="flex flex-col items-center gap-2">
-              <CardBack size="lg" count={room.deck_count} />
+              <div className="w-24 2xl:w-36">
+                <CardBack size="fill" count={room.deck_count} />
+              </div>
               <span className="text-xs font-bold uppercase tracking-wider text-night-300">Pioche</span>
             </div>
             <div className="flex flex-col items-center gap-2">
-              <div className="grid aspect-[5/7] w-32 place-items-center rounded-2xl border-2 border-dashed border-cream-100/15">
+              <div className="grid aspect-[5/7] w-24 place-items-center rounded-2xl border-2 border-dashed border-cream-100/15 2xl:w-36">
                 <AnimatePresence mode="popLayout">
                   {lastCardEvent?.payload.card_type && lastCardEvent.payload.card_value && (
                     <motion.div key={lastCardEvent.id} exit={{ opacity: 0, scale: 0.8 }}>
                       <Card
                         type={lastCardEvent.payload.card_type}
                         value={lastCardEvent.payload.card_value}
-                        size="lg"
+                        size="fill"
+                        className="w-24 2xl:w-36"
                         animateIn
                       />
                     </motion.div>
@@ -78,7 +82,7 @@ export function Board({ state }: { state: GameState }) {
               initial={{ scale: 0.6, opacity: 0, rotate: -4 }}
               animate={{ scale: 1, opacity: 1, rotate: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className={`flex items-center gap-3 rounded-2xl px-4 py-3 font-display text-lg ${
+              className={`flex items-center gap-3 rounded-2xl px-4 py-3 font-display text-lg sm:col-span-2 2xl:text-2xl ${
                 flash.action === 'coup_fourre' ? 'bg-signal-400 text-night-900' : 'bg-flame-500 text-cream-50'
               }`}
             >
@@ -88,7 +92,7 @@ export function Board({ state }: { state: GameState }) {
           )}
         </AnimatePresence>
 
-        <div className="flex min-h-0 flex-1 flex-col rounded-3xl bg-night-950/50 p-5 ring-1 ring-cream-100/10">
+        <div className="flex max-h-72 min-h-0 flex-col overflow-hidden rounded-3xl bg-night-950/50 p-4 ring-1 ring-cream-100/10 sm:max-h-none xl:flex-1 2xl:p-6">
           <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-night-300">Journal de bord</h2>
           <ol className="flex flex-col-reverse gap-2 overflow-hidden">
             <AnimatePresence initial={false}>
@@ -98,7 +102,7 @@ export function Board({ state }: { state: GameState }) {
                   layout
                   initial={{ opacity: 0, x: 30 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className={`rounded-xl px-3 py-2 text-sm font-semibold ${
+                  className={`rounded-xl px-3 py-2 text-sm font-semibold 2xl:text-base ${
                     e.action === 'coup_fourre'
                       ? 'bg-signal-400/20 text-signal-300'
                       : e.action === 'play_attack'

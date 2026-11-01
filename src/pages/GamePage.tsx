@@ -47,7 +47,7 @@ function CoupFourreDialog({
   const safety = SAFETY_FOR[pending.attack]
   return (
     <motion.div
-      className="fixed inset-0 z-50 grid place-items-center bg-flame-700/80 p-5 backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-flame-700/80 p-4 backdrop-blur-sm"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -56,7 +56,7 @@ function CoupFourreDialog({
         initial={{ scale: 0.7, rotate: -6 }}
         animate={{ scale: 1, rotate: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 18 }}
-        className="flex w-full max-w-sm flex-col items-center gap-5 rounded-[2rem] bg-night-900 p-6 text-center ring-4 ring-signal-400"
+        className="flex w-full max-w-sm flex-col items-center gap-5 rounded-[2rem] bg-night-900 p-6 text-center ring-4 ring-signal-400 short:gap-2 short:p-4"
       >
         <div className="flex items-center gap-2 font-display text-flame-400">
           <Swords className="size-5" /> Attaque : {CARD_INFO[pending.attack].label}
@@ -111,28 +111,37 @@ export default function GamePage() {
   const pending = state.room.pending_attack
 
   return (
-    <main className="min-h-dvh bg-asphalt pb-[22rem]">
+    <main className="flex h-app flex-col overflow-hidden bg-asphalt">
       <GameHeader code={code} deckCount={state.room.deck_count} live={game.live} />
-      <div className="mx-auto flex max-w-lg flex-col gap-3 px-3">
-        <TurnIndicator current={game.current} pending={pending} players={state.players} />
-        <div className="pointer-events-none fixed inset-x-3 bottom-[19.5rem] z-40 mx-auto max-w-lg">
-          <Notice message={game.actionError} />
+
+      {/* Zone centrale défilante : jamais masquée par la main */}
+      <div className="relative min-h-0 flex-1">
+        <div className="h-full overflow-y-auto overscroll-contain">
+          <div className="mx-auto grid max-w-lg grid-cols-1 gap-3 px-3 pb-4 sm:max-w-3xl md:grid-cols-2 md:items-start short:max-w-none short:grid-cols-2 short:gap-2">
+            <div className="flex flex-col gap-3 md:col-span-2 short:col-span-2 short:gap-2">
+              <TurnIndicator current={game.current} pending={pending} players={state.players} />
+              <PauseControl state={state} busy={game.busy} onKick={game.kickPlayer} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <h2 className="px-1 text-xs font-bold uppercase tracking-[0.18em] text-night-300">Vous</h2>
+              <PlayerStatus player={me} variant="compact" active={isMyTurn} isHost={me.id === state.room.host_player_id} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <h2 className="px-1 text-xs font-bold uppercase tracking-[0.18em] text-night-300">Adversaires</h2>
+              {opponents.map((p) => (
+                <PlayerStatus
+                  key={p.id}
+                  player={p}
+                  variant="compact"
+                  active={p.id === state.room.current_player_id}
+                  isHost={p.id === state.room.host_player_id}
+                />
+              ))}
+            </div>
+          </div>
         </div>
-        <PauseControl state={state} busy={game.busy} onKick={game.kickPlayer} />
-
-        <PlayerStatus player={me} variant="compact" active={isMyTurn} isHost={me.id === state.room.host_player_id} />
-
-        <h2 className="mt-1 px-1 text-xs font-bold uppercase tracking-[0.18em] text-night-300">Adversaires</h2>
-        <div className="flex flex-col gap-2">
-          {opponents.map((p) => (
-            <PlayerStatus
-              key={p.id}
-              player={p}
-              variant="compact"
-              active={p.id === state.room.current_player_id}
-              isHost={p.id === state.room.host_player_id}
-            />
-          ))}
+        <div className="pointer-events-none absolute inset-x-3 bottom-3 z-40 mx-auto max-w-lg">
+          <Notice message={game.actionError} />
         </div>
       </div>
 

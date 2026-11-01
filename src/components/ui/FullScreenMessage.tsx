@@ -5,7 +5,7 @@ import { Logo } from './Logo'
 
 export function FullScreenMessage({ title, children, loading }: { title?: string; children?: ReactNode; loading?: boolean }) {
   return (
-    <main className="grid min-h-dvh place-items-center bg-asphalt px-6 text-center">
+    <main className="grid min-h-app place-items-center bg-asphalt px-6 text-center">
       <div className="flex max-w-sm flex-col items-center gap-5">
         <Logo />
         {loading && <LoaderCircle className="size-8 animate-spin text-signal-400" />}

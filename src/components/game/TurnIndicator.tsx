@@ -42,11 +42,11 @@ export function TurnIndicator({ current, pending, players, large }: TurnIndicato
           exit={{ y: 24, opacity: 0, scale: 0.95 }}
           transition={{ type: 'spring', stiffness: 380, damping: 26 }}
           className={`flex items-center justify-center gap-2 rounded-2xl font-extrabold shadow-lg ${tone} ${
-            large ? 'px-8 py-4 text-2xl' : 'px-4 py-2.5 text-sm'
+            large ? 'px-6 py-3 text-xl 2xl:px-8 2xl:py-4 2xl:text-3xl' : 'px-4 py-2.5 text-sm short:py-1.5'
           }`}
         >
           {icon}
-          <span className="truncate">{text}</span>
+          <span className="text-balance text-center leading-tight">{text}</span>
         </motion.div>
       </AnimatePresence>
     </div>

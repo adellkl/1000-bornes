@@ -52,7 +52,7 @@ export default function JoinGamePage() {
         : null
 
   return (
-    <main className="flex min-h-dvh flex-col items-center bg-asphalt px-5 py-8">
+    <main className="flex min-h-app flex-col items-center bg-asphalt px-5 py-8">
       <Logo />
       <div className="mt-10 w-full max-w-sm rounded-[2rem] bg-night-800/85 p-6 ring-1 ring-cream-100/10">
         <JoinRoom

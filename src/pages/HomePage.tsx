@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card } from '../components/game/Card'
 import { Button } from '../components/ui/Button'
+import { InstallApp } from '../components/ui/InstallApp'
 import { Logo } from '../components/ui/Logo'
 import type { CardType, CardValue } from '../types/game'
 
@@ -26,8 +27,8 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-dvh overflow-hidden bg-asphalt">
-      <div className="mx-auto flex min-h-dvh max-w-5xl flex-col items-center justify-center gap-10 px-5 py-12">
+    <main className="min-h-app overflow-hidden bg-asphalt">
+      <div className="mx-auto flex min-h-app max-w-5xl flex-col items-center justify-center gap-10 px-5 py-12">
         <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-center">
           <Logo size="xl" />
           <p className="mx-auto mt-4 max-w-md text-lg font-semibold text-cream-200">
@@ -39,17 +40,17 @@ export default function HomePage() {
           {FAN.map((c, i) => (
             <motion.div
               key={c.value}
-              className="absolute bottom-0 origin-bottom"
+              className="absolute bottom-0 w-[clamp(4rem,19vw,5.4rem)] origin-bottom"
               initial={{ rotate: 0, y: 60, opacity: 0 }}
-              animate={{ rotate: (i - 2) * 11, y: Math.abs(i - 2) * 8, x: (i - 2) * 46, opacity: 1 }}
+              animate={{ rotate: (i - 2) * 11, y: Math.abs(i - 2) * 8, x: (i - 2) * Math.min(46, window.innerWidth * 0.12), opacity: 1 }}
               transition={{ delay: 0.15 + i * 0.07, type: 'spring', stiffness: 160, damping: 16 }}
             >
-              <Card type={c.type} value={c.value} size="md" />
+              <Card type={c.type} value={c.value} size="fill" />
             </motion.div>
           ))}
         </div>
 
-        <div className="grid w-full max-w-3xl gap-4 md:grid-cols-2">
+        <div className="grid w-full max-w-3xl grid-cols-1 gap-4 md:grid-cols-2">
           <section className="flex flex-col gap-4 rounded-3xl bg-night-800/80 p-6 ring-1 ring-cream-100/10">
             <div className="flex items-center gap-2 text-sm font-bold text-night-300">
               <Monitor className="size-4 text-signal-400" /> Sur l’ordinateur
@@ -72,13 +73,14 @@ export default function HomePage() {
               placeholder="CODE"
               autoCapitalize="characters"
               autoComplete="off"
-              className="h-14 rounded-2xl bg-cream-50 text-center font-display text-2xl tracking-[0.3em] text-night-900 placeholder:text-night-300/60 focus:outline-none focus:ring-4 focus:ring-signal-400"
+              className="h-14 w-full min-w-0 rounded-2xl bg-cream-50 text-center font-display text-2xl tracking-[0.3em] text-night-900 placeholder:text-night-300/60 focus:outline-none focus:ring-4 focus:ring-signal-400"
             />
             <Button type="submit" size="lg" variant="secondary" disabled={code.length < 4}>
               Rejoindre
             </Button>
           </form>
         </div>
+        <InstallApp />
       </div>
     </main>
   )

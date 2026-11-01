@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* Écrans peu hauts : téléphone à l'horizontale, petite fenêtre */
+@custom-variant short (@media (max-height: 540px));
+
 @theme {
   --font-display: 'Bungee', ui-sans-serif, system-ui, sans-serif;
   --font-sans: 'Manrope', ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -40,9 +43,15 @@
   body {
     @apply bg-night-900 font-sans text-cream-100 antialiased;
     -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+    /* Application installée (PWA) : ne pas passer sous l'encoche */
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
   button {
     cursor: pointer;
+    touch-action: manipulation;
   }
   button:disabled {
     cursor: not-allowed;
@@ -100,4 +109,12 @@
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Hauteur d'écran utile (sans l'encoche en mode application installée) */
+@utility h-app {
+  height: calc(100dvh - env(safe-area-inset-top));
+}
+@utility min-h-app {
+  min-height: calc(100dvh - env(safe-area-inset-top));
 }

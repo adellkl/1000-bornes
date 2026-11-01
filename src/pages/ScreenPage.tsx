@@ -50,23 +50,23 @@ export default function ScreenPage() {
 
   if (state.room.status === 'lobby') {
     return (
-      <main className="min-h-dvh bg-table">
-        <div className="mx-auto grid min-h-dvh max-w-6xl items-center gap-10 px-8 py-10 lg:grid-cols-[1.1fr_1fr]">
-          <section className="flex flex-col items-center gap-8 text-center">
+      <main className="grid min-h-app place-items-center bg-table">
+        <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-8 px-4 py-8 sm:px-8 lg:grid-cols-[1.1fr_1fr] lg:gap-10 2xl:[zoom:1.3] min-[2400px]:[zoom:1.7]">
+          <section className="flex min-w-0 flex-col items-center gap-6 text-center sm:gap-8">
             <Logo size="md" />
             <div>
               <div className="text-sm font-bold uppercase tracking-[0.25em] text-night-300">Code de la salle</div>
               <motion.div
                 initial={{ letterSpacing: '0.6em', opacity: 0 }}
                 animate={{ letterSpacing: '0.18em', opacity: 1 }}
-                className="font-display text-7xl text-signal-400 sm:text-8xl"
+                className="font-display text-[clamp(2.5rem,13vw,6rem)] leading-none text-signal-400 2xl:text-[8rem]"
               >
                 {code}
               </motion.div>
             </div>
             <QRCodeShare url={joinUrl} size={240} caption="Ouvrez l’appareil photo de votre téléphone et visez le code. Fonctionne en 4G comme en Wi-Fi." />
           </section>
-          <section className="flex flex-col gap-6 rounded-[2rem] bg-night-900/70 p-7 ring-1 ring-cream-100/10">
+          <section className="flex min-w-0 flex-col gap-6 rounded-[2rem] bg-night-900/70 p-5 ring-1 ring-cream-100/10 sm:p-7">
             <Notice message={game.actionError} />
             <RoomLobby state={state} busy={game.busy} onStart={game.startGame} onKick={game.kickPlayer} />
             <HostSeatShare state={state} code={code} />
@@ -77,7 +77,7 @@ export default function ScreenPage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col bg-table">
+    <main className="flex min-h-app flex-col bg-table xl:h-app xl:overflow-hidden">
       <GameHeader
         code={code}
         deckCount={state.room.deck_count}
@@ -91,7 +91,7 @@ export default function ScreenPage() {
           )
         }
       />
-      <div className="flex flex-col gap-3 px-8 pb-4 empty:hidden">
+      <div className="flex flex-col gap-3 px-4 pb-4 empty:hidden sm:px-6 2xl:px-10">
         <Notice message={game.actionError} />
         <PauseControl state={state} busy={game.busy} onKick={game.kickPlayer} />
       </div>

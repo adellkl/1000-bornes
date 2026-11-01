@@ -25,8 +25,8 @@ export function Button({ variant = 'primary', loading, icon, size = 'md', classN
     <button
       {...rest}
       disabled={disabled || loading}
-      className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-5 font-extrabold transition-[transform,box-shadow,background-color] duration-100 disabled:opacity-50 disabled:active:translate-y-0 ${
-        size === 'lg' ? 'min-h-14 px-7 text-lg' : 'text-base'
+      className={`inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-5 font-extrabold transition-[transform,box-shadow,background-color] duration-100 disabled:opacity-50 disabled:active:translate-y-0 ${
+        size === 'lg' ? 'min-h-14 px-5 text-lg sm:px-7' : 'text-base'
       } ${VARIANTS[variant]} ${className}`}
     >
       {loading ? <LoaderCircle className="size-5 animate-spin" /> : icon}

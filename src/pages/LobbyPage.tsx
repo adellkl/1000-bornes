@@ -17,7 +17,7 @@ export default function LobbyPage() {
   if (state.room.status !== 'lobby') return <Navigate to={`/game/${code}`} replace />
 
   return (
-    <main className="min-h-dvh bg-asphalt">
+    <main className="min-h-app bg-asphalt">
       <GameHeader code={code} live={game.live} />
       <div className="mx-auto flex max-w-md flex-col gap-5 px-4 pb-10 pt-4">
         <div className="rounded-3xl bg-night-800/60 p-5 text-center ring-1 ring-cream-100/10">

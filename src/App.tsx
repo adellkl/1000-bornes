@@ -4,7 +4,7 @@ import { router } from './routes'
 
 function MissingConfig() {
   return (
-    <main className="grid min-h-dvh place-items-center bg-asphalt p-6">
+    <main className="grid min-h-app place-items-center bg-asphalt p-6">
       <div className="max-w-md rounded-3xl bg-night-800 p-6 ring-1 ring-flame-500/40">
         <h1 className="font-display text-2xl text-signal-400">Configuration requise</h1>
         <p className="mt-3 text-sm text-cream-200">
