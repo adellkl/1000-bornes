@@ -8,7 +8,7 @@ Jeu de cartes de course multijoueur, inspiré du Mille Bornes, pensé pour jouer
 
 Visuels de cartes et illustrations originaux (bornes SVG, icônes Lucide) : aucun visuel officiel n'est repris.
 
-**En ligne** : https://route-1000-coral.vercel.app · Firebase : projet `route-1000-jeu` (région `europe-west1`, Firestore `eur3`) · Code : https://github.com/adellkl/1000-bornes
+**En ligne** : https://route-1000-coral.vercel.app · Firebase (gratuit) : projet `route-1000-jeu` (Firestore `eur3`) · Code : https://github.com/adellkl/1000-bornes
 
 ---
 
@@ -27,17 +27,17 @@ Visuels de cartes et illustrations originaux (bornes SVG, icônes Lucide) : aucu
 
 ---
 
-## Stack
+## Stack (100 % gratuite)
 
-| Rôle | Outil |
-| --- | --- |
-| Front | React 19 + Vite + TypeScript |
-| Style | Tailwind CSS v4 (`@tailwindcss/vite`) |
-| Routage | React Router (`src/routes/index.tsx`, pages chargées à la demande) |
-| Animations | Framer Motion |
-| Icônes / QR | Lucide React, qrcode.react |
-| Backend | **Firebase** : Authentication (anonyme), Cloud Firestore (temps réel), Cloud Functions (logique de jeu) |
-| Hébergement | Vercel (front) + Firebase (Firestore, Functions) |
+| Rôle | Outil | Coût |
+| --- | --- | --- |
+| Front | React 19 + Vite + TypeScript, Tailwind CSS v4, React Router, Framer Motion, Lucide, qrcode.react | — |
+| Données temps réel | **Firebase Firestore** (forfait Spark) | gratuit |
+| Identité des joueurs | **Firebase Authentication** anonyme (forfait Spark) | gratuit |
+| Logique de jeu (serveur) | **Fonction serverless Vercel** `api/game.ts` + SDK Admin Firebase | gratuit (Hobby) |
+| Hébergement | Vercel | gratuit (Hobby) |
+
+Aucune Cloud Function, donc **aucun forfait Blaze ni carte bancaire** : la validation des coups tourne dans une fonction Vercel gratuite.
 
 ---
 
@@ -47,38 +47,31 @@ Prérequis : Node.js 22, Java 21+ (uniquement pour les émulateurs locaux).
 
 ```bash
 npm install
-npm --prefix functions install
 cp .env.example .env
 ```
 
 ---
 
-## Configurer Firebase
+## Configurer Firebase (gratuit)
 
-1. **Créer le projet** : [console.firebase.google.com](https://console.firebase.google.com) → *Ajouter un projet* (ou `npx firebase projects:create`).
-2. **Passer au forfait Blaze** (*Paramètres → Utilisation et facturation*). Les Cloud Functions l'exigent. Le quota gratuit inclus (2 M d'appels par mois) couvre largement des parties entre amis, mais une carte bancaire est demandée.
-3. **Authentication → Sign-in method → Anonyme → Activer.**
-4. **Firestore Database → Créer une base de données** (mode production, région `eur3` ou `europe-west1`).
-5. **Ajouter une application Web** (*Paramètres du projet → Vos applications → </>*) et recopier la configuration dans `.env` :
-
-```dotenv
-VITE_FIREBASE_API_KEY=AIza...
-VITE_FIREBASE_AUTH_DOMAIN=mon-projet.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=mon-projet
-VITE_FIREBASE_APP_ID=1:123:web:abc
-VITE_FIREBASE_REGION=europe-west1
-VITE_PUBLIC_URL=              # optionnel : URL utilisée dans les QR codes
-```
-
-Ces valeurs sont publiques par nature : la sécurité repose sur les règles Firestore et les Cloud Functions.
-
-6. **Déployer les règles et les fonctions** :
+1. **Créer le projet** sur [console.firebase.google.com](https://console.firebase.google.com). Le forfait Spark gratuit suffit.
+2. **Authentication → Sign-in method → Anonyme → Activer.**
+3. **Firestore Database → Créer une base de données** (région `eur3`).
+4. **Ajouter une application Web** et recopier sa configuration dans `.env` (`VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`). Ces valeurs sont publiques par nature.
+5. **Déployer les règles de sécurité** :
 
 ```bash
 npx firebase login
-npx firebase use mon-projet
-npm run deploy:firebase      # = firebase deploy --only firestore,functions
+npm run deploy:firebase      # = firebase deploy --only firestore
 ```
+
+6. **Clé de compte de service** (gratuite) pour la fonction Vercel : *Paramètres du projet → Comptes de service → Générer une nouvelle clé privée*. Puis :
+
+```bash
+npm run setup:key -- ~/Downloads/<projet>-firebase-adminsdk-xxxxx.json
+```
+
+Le script l'enregistre dans la variable Vercel `FIREBASE_SERVICE_ACCOUNT` (production + aperçu), puis redéploie. Ne committez jamais ce fichier : il est déjà dans `.gitignore`.
 
 ---
 
@@ -87,45 +80,31 @@ npm run deploy:firebase      # = firebase deploy --only firestore,functions
 ### Avec les émulateurs (aucun compte nécessaire)
 
 ```bash
-npm run emulators            # Auth :9099, Firestore :8085, Functions :5001
-npx vite --mode emulators    # dans un 2ᵉ terminal (lit .env.emulators)
+npm run emulators            # Auth :9099, Firestore :8085
+npm run dev:api              # serveur de jeu local (api/game.ts) sur :3001
+npx vite --mode emulators    # front ; /api est relayé vers :3001
 ```
-
-### Contre le vrai projet Firebase
-
-```bash
-npm run dev
-```
-
-Pour rejoindre avec un vrai téléphone en local, ouvrez l'ordinateur sur son adresse réseau (`http://192.168.x.x:5173`, affichée par Vite), car le QR code reprend l'adresse de la page. En production (Vercel), n'importe quel téléphone, en 4G ou sur un autre Wi-Fi, peut rejoindre.
 
 ### Simuler plusieurs joueurs dans un seul navigateur
 
 Ajoutez `?tab=<nom>` à l'URL : l'onglet obtient sa propre session anonyme.
 
-```
-http://localhost:5173/create?tab=ecran
-http://localhost:5173/join/AB12CD?tab=bruno
-```
-
 ### Scripts
 
 | Commande | Effet |
 | --- | --- |
-| `npm run dev` | serveur de développement |
-| `npm run build` | vérification TypeScript et build de production (`dist/`) |
-| `npm test` | tests du moteur de règles (Cloud Functions) |
-| `npm run emulators` | émulateurs Firebase locaux |
-| `npm run deploy:firebase` | déploie les règles Firestore et les Cloud Functions |
+| `npm run dev` | front de développement |
+| `npm run build` | vérification TypeScript (front + API) et build de production |
+| `npm test` | tests du moteur de règles |
+| `npm run emulators` / `npm run dev:api` | environnement local complet |
+| `npm run deploy:firebase` | déploie les règles Firestore |
+| `npm run setup:key -- <clé.json>` | installe la clé de service sur Vercel et redéploie |
 
 ---
 
 ## Déployer sur Vercel
 
-1. Importez le dépôt GitHub sur [vercel.com/new](https://vercel.com/new). Vercel détecte **Vite** (`npm run build`, sortie `dist`).
-2. Ajoutez les variables `VITE_FIREBASE_*` (et `VITE_PUBLIC_URL=https://votre-app.vercel.app`) dans *Settings → Environment Variables*.
-3. Déployez. [`vercel.json`](vercel.json) redirige toutes les routes vers `index.html`.
-4. Dans Firebase, ajoutez le domaine Vercel dans *Authentication → Settings → Authorized domains*.
+Le projet Vercel est relié au dépôt GitHub. Variables à définir : `VITE_FIREBASE_*` et `FIREBASE_PROJECT_ID` (déjà en place), plus `FIREBASE_SERVICE_ACCOUNT` (via `npm run setup:key`). [`vercel.json`](vercel.json) gère la réécriture SPA, et `api/game.ts` est automatiquement déployé comme fonction serverless.
 
 ---
 
@@ -192,27 +171,26 @@ http://localhost:5173/join/AB12CD?tab=bruno
 ## Architecture et sécurité
 
 ```
-Téléphone / Écran ──httpsCallable (jeton anonyme)──► Cloud Functions (transaction Firestore)
-        ▲                                               │ valident et appliquent le coup (engine.ts)
-        │                                               ▼
+Téléphone / Écran ──POST /api/game (jeton Firebase)──► Fonction Vercel (transaction Firestore)
+        ▲                                                │ valide et applique le coup (api/_lib/engine.ts)
+        │                                                ▼
         └──── onSnapshot (temps réel) ◄──── rooms/{code}             état public
                                             rooms/{code}/events/*    journal
                                             rooms/{code}/hands/{id}  main privée (lisible par son seul propriétaire)
                                             rooms/{code}/private/*   pioche et défausse (jamais lisibles)
 ```
 
-- **Validation 100 % serveur** : tour, propriété de la carte, distances, limite, cibles, bottes et coup fourré sont vérifiés dans [`functions/src/engine.ts`](functions/src/engine.ts), exécuté par les Cloud Functions. Le moteur côté navigateur ([`src/lib/gameEngine.ts`](src/lib/gameEngine.ts)) ne fait que griser les cartes.
-- **Mains secrètes** : [`firestore.rules`](firestore.rules) n'autorise la lecture d'une main que si `uid == request.auth.uid`. La pioche (`private/state`) et la présence sont illisibles. Les autres joueurs ne voient que le **nombre** de cartes.
-- **Aucune écriture client** : toutes les règles d'écriture valent `false`. Seules les Functions (SDK Admin) modifient les données.
-- **Hôte** : seul l'hôte (l'ordinateur qui a créé la salle, ou le téléphone qui a repris sa place via son QR personnel) peut lancer, relancer ou retirer un joueur.
-- **Concurrence** : chaque action est une transaction Firestore, ce qui empêche les doubles coups.
+- **Validation 100 % serveur** : [`api/_lib/engine.ts`](api/_lib/engine.ts) vérifie le tour, la propriété de la carte, les distances, la limite, les cibles, les bottes et le coup fourré. La fonction contrôle d'abord le jeton Firebase de l'appelant (`verifyIdToken`).
+- **Mains secrètes** : [`firestore.rules`](firestore.rules) ne laisse lire une main qu'à son propriétaire. La pioche, la défausse et la présence sont illisibles.
+- **Aucune écriture client** : toutes les règles d'écriture valent `false`. Seule la fonction (SDK Admin) écrit.
+- **Concurrence** : chaque action est une transaction Firestore.
 
 ---
 
 ## Tests
 
-- `npm test` : 9 tests du moteur. Ils couvrent l'arrivée des joueurs, le lancement réservé à l'hôte, les coups hors tour, les règles de distance (Feu rouge, limite, 1 000 pile, deux 200 au maximum), les attaques, parades et bottes, le coup fourré et son expiration, la déconnexion, le retrait et le forfait, la reprise de place, et 30 parties complètes jouées automatiquement.
-- **Bout en bout avec les émulateurs** : un écran et deux téléphones dans le navigateur. Le scénario couvre la création, la reprise de place de l'hôte, l'arrivée d'une joueuse, le lancement, le jeu au toucher, une attaque et la synchronisation de l'écran. La sécurité a aussi été vérifiée : lire la main adverse ou la pioche, ou modifier la salle, renvoie **403**.
+- `npm test` : 9 tests du moteur. Ils couvrent les règles de distance, les attaques et bottes, le coup fourré et son expiration, la déconnexion et le forfait, la reprise de place de l'hôte, et 30 parties complètes jouées automatiquement.
+- **Bout en bout avec les émulateurs** : création, arrivée d'un joueur, lancement, coups au toucher et synchronisation en temps réel, via l'API de jeu.
 
 ---
 
@@ -220,7 +198,9 @@ Téléphone / Écran ──httpsCallable (jeton anonyme)──► Cloud Function
 
 ```
 src/                 front React (composants, pages, hooks, lib/firebase.ts, lib/gameEngine.ts)
-functions/src/       engine.ts (règles), index.ts (Cloud Functions), engine.test.ts
+api/game.ts          serveur de jeu (fonction Vercel)
+api/_lib/            engine.ts (règles), actions.ts (transactions Firestore), admin.ts, tests
+scripts/             dev-api.ts (API locale), setup-service-account.sh
 firestore.rules      règles de sécurité
 firebase.json        configuration Firebase et émulateurs
 vercel.json          réécriture SPA

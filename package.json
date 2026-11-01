@@ -12,7 +12,8 @@
     "dev:emulators": "vite --mode emulators",
     "test": "tsx --test api/_lib/engine.test.ts",
     "deploy:firebase": "firebase deploy --only firestore",
-    "dev:api": "FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 FIREBASE_PROJECT_ID=demo-route-1000 tsx watch scripts/dev-api.ts"
+    "dev:api": "FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 FIREBASE_PROJECT_ID=demo-route-1000 tsx watch scripts/dev-api.ts",
+    "setup:key": "bash scripts/setup-service-account.sh"
   },
   "dependencies": {
     "firebase": "^13.1.0",
