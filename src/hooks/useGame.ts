@@ -25,7 +25,17 @@ export function useGame(code: string | undefined) {
   // Présence : battement de cœur régulier (détection des déconnexions côté serveur)
   useEffect(() => {
     if (!code) return
-    const beat = () => call('heartbeat', { code }).catch(() => undefined)
+    let inFlight = false
+    let last = 0
+    const beat = () => {
+      // Au réveil d'un onglet en arrière-plan, les minuteurs en retard partent d'un coup : on les ignore
+      if (inFlight || Date.now() - last < HEARTBEAT_MS / 2) return
+      inFlight = true
+      last = Date.now()
+      call('heartbeat', { code })
+        .catch(() => undefined)
+        .finally(() => (inFlight = false))
+    }
     beat()
     const id = setInterval(beat, HEARTBEAT_MS)
     return () => clearInterval(id)

@@ -123,7 +123,9 @@ export function useRealtimeRoom(code: string | undefined) {
   const announce = useCallback(
     (nextPlayerId: string | null, turn: number) => {
       if (!code || !uid) return
-      set(dbRef(rtdb, `live/${code}/${uid}`), { nextPlayerId, turn, at: Date.now() }).catch(() => undefined)
+      set(dbRef(rtdb, `live/${code}/${uid}`), { nextPlayerId, turn, at: Date.now() }).catch((e) =>
+        console.warn('[route1000] annonce refusée', e),
+      )
     },
     [code, uid],
   )

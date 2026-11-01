@@ -10,6 +10,8 @@ export default defineConfig({
     // Application installable (écran d'accueil du téléphone, plein écran, icône)
     VitePWA({
       registerType: 'autoUpdate',
+      // Enregistrement manuel (src/main.tsx) pour vérifier les mises à jour régulièrement
+      injectRegister: false,
       includeAssets: ['favicon.ico', 'favicon.svg', 'apple-touch-icon-180x180.png'],
       manifest: {
         name: 'Route 1000',
@@ -35,6 +37,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
         navigateFallback: '/index.html',
         cleanupOutdatedCaches: true,
+        // La nouvelle version prend la main immédiatement (pas de joueurs bloqués sur une ancienne)
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com',
