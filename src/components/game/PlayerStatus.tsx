@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Crown, Layers, WifiOff } from 'lucide-react'
+import { Crosshair, Crown, Layers, WifiOff } from 'lucide-react'
 import { CARD_INFO, PLAYER_COLORS } from '../../lib/deck'
 import { statusLabel } from '../../lib/gameEngine'
 import type { Player } from '../../types/game'
@@ -29,7 +29,8 @@ export function playerColor(player: Player) {
 export function PlayerStatus({ player, active, isHost, variant = 'screen', onClick, highlight }: PlayerStatusProps) {
   const status = statusLabel(player)
   const color = playerColor(player)
-  if (variant === 'compact') return <CompactStatus player={player} active={active} isHost={isHost} />
+  if (variant === 'compact')
+    return <CompactStatus player={player} active={active} isHost={isHost} onClick={onClick} selected={highlight} />
 
   // Panneau « grand écran » : s'adapte à sa propre largeur (container queries),
   // de la petite tablette à la TV 4K.
@@ -105,16 +106,38 @@ const PILL_TONES = {
 }
 
 /** Version mobile : une ligne sobre par joueur */
-function CompactStatus({ player, active, isHost }: { player: Player; active?: boolean; isHost?: boolean }) {
+function CompactStatus({
+  player,
+  active,
+  isHost,
+  onClick,
+  selected,
+}: {
+  player: Player
+  active?: boolean
+  isHost?: boolean
+  onClick?: () => void
+  selected?: boolean
+}) {
   const status = statusLabel(player)
   const color = playerColor(player)
   const limited = player.attacks.includes('limite') && status.tone === 'stop'
   return (
     <motion.div
       layout
-      className={`rounded-2xl bg-night-800/80 px-3.5 py-3 ring-1 transition-shadow ${
-        active ? 'ring-2 ring-signal-400' : 'ring-cream-100/10'
-      }`}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-pressed={onClick ? Boolean(selected) : undefined}
+      onKeyDown={onClick ? (e) => (e.key === 'Enter' || e.key === ' ') && onClick() : undefined}
+      whileTap={onClick ? { scale: 0.98 } : undefined}
+      className={`rounded-2xl px-3.5 py-3 ring-1 transition-[box-shadow,background-color] ${
+        selected
+          ? 'bg-flame-500/15 ring-2 ring-flame-500'
+          : active
+            ? 'bg-night-800/80 ring-2 ring-signal-400'
+            : 'bg-night-800/80 ring-cream-100/10'
+      } ${onClick ? 'cursor-pointer' : ''}`}
     >
       <div className="flex items-center gap-3">
         <span className="grid size-9 shrink-0 place-items-center rounded-full font-display text-sm text-night-900" style={{ background: color }}>
@@ -142,6 +165,16 @@ function CompactStatus({ player, active, isHost }: { player: Player; active?: bo
             )
           })}
         </div>
+        {onClick && (
+          <span
+            className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[0.65rem] font-extrabold ${
+              selected ? 'bg-flame-500 text-cream-50' : 'bg-night-700 text-cream-200'
+            }`}
+          >
+            <Crosshair className="size-3" />
+            {selected ? 'Ciblé' : 'Cibler'}
+          </span>
+        )}
         <motion.span
           key={player.distance}
           initial={{ scale: 1.3 }}

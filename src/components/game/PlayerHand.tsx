@@ -1,10 +1,10 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Trash, X } from 'lucide-react'
+import { Crosshair, Trash, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { CARD_INFO } from '../../lib/deck'
-import { getPlayOption } from '../../lib/gameEngine'
-import type { Card as CardModel, Player } from '../../types/game'
+import { canBeAttacked, getPlayOption, statusLabel } from '../../lib/gameEngine'
+import type { AttackValue, Card as CardModel, Player } from '../../types/game'
 import { Button } from '../ui/Button'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { Card } from './Card'
@@ -19,13 +19,16 @@ interface PlayerHandProps {
   onPlay: (cardId: string, targetId?: string) => Promise<boolean>
   onDiscard: (cardId: string) => Promise<boolean>
   onHint: (message: string) => void
+  /** Adversaire déjà sélectionné sur l'écran (ciblage « joueur d'abord ») */
+  target: Player | null
+  onClearTarget: () => void
 }
 
 /**
  * Main du joueur, fixée en bas, entièrement visible (grille, pas de défilement).
  * Toucher une carte la joue immédiatement ; la défausse passe par un mode dédié + confirmation.
  */
-export function PlayerHand({ hand, me, players, canAct, busy, onPlay, onDiscard, onHint }: PlayerHandProps) {
+export function PlayerHand({ hand, me, players, canAct, busy, onPlay, onDiscard, onHint, target, onClearTarget }: PlayerHandProps) {
   const [discardMode, setDiscardMode] = useState(false)
   const [toDiscard, setToDiscard] = useState<CardModel | null>(null)
   const [targetFor, setTargetFor] = useState<CardModel | null>(null)
@@ -39,18 +42,47 @@ export function PlayerHand({ hand, me, players, canAct, busy, onPlay, onDiscard,
     if (!canAct) return onHint('Ce n’est pas encore votre tour.')
     if (discardMode) return setToDiscard(card)
     const option = options[card.id]
+    if (card.type === 'attack') {
+      // Adversaire déjà choisi : on lui envoie directement cette attaque
+      if (target) {
+        const check = canBeAttacked(target, card.value as AttackValue)
+        if (!check.ok) return onHint(`${check.reason}. Choisissez une autre carte ou un autre adversaire.`)
+        onClearTarget()
+        return onPlay(card.id, target.id)
+      }
+      // Sinon : choix de l'adversaire visé
+      if (!option.playable) return onHint(`${option.reason}. Utilisez « Défausser » si besoin.`)
+      return setTargetFor(card)
+    }
     if (!option.playable) return onHint(`${option.reason}. Utilisez « Défausser » si besoin.`)
-    if (card.type === 'attack' && option.targets && option.targets.length > 1) return setTargetFor(card)
-    onPlay(card.id, option.targets?.[0]?.id)
+    onPlay(card.id)
+  }
+
+  const isDimmed = (card: CardModel) => {
+    if (!canAct || discardMode) return false
+    if (target) return card.type !== 'attack' || !canBeAttacked(target, card.value as AttackValue).ok
+    return !options[card.id]?.playable
   }
 
   return (
     <div className="shrink-0 border-t border-cream-100/10 bg-night-950/95">
       <div className="mx-auto max-w-lg px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-2.5 sm:max-w-3xl short:max-w-xl short:pb-[max(env(safe-area-inset-bottom),0.5rem)] short:pt-1.5">
         <div className="mb-2 flex h-9 items-center justify-between gap-2 short:mb-1.5 short:h-8">
-          <span className="truncate text-xs font-bold uppercase tracking-[0.18em] text-night-300">
-            {discardMode ? 'Choisissez la carte' : canAct ? 'Touchez pour jouer' : 'Votre main'}
-          </span>
+          {target && canAct && !discardMode ? (
+            <button
+              type="button"
+              onClick={onClearTarget}
+              className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-flame-500 px-3 py-1.5 text-xs font-extrabold text-cream-50"
+            >
+              <Crosshair className="size-3.5 shrink-0" />
+              <span className="truncate">Attaque contre {target.name}</span>
+              <X className="size-3.5 shrink-0" />
+            </button>
+          ) : (
+            <span className="truncate text-xs font-bold uppercase tracking-[0.18em] text-night-300">
+              {discardMode ? 'Choisissez la carte' : canAct ? 'Touchez pour jouer' : 'Votre main'}
+            </span>
+          )}
           <button
             type="button"
             disabled={!canAct}
@@ -79,7 +111,7 @@ export function PlayerHand({ hand, me, players, canAct, busy, onPlay, onDiscard,
                   type={card.type}
                   value={card.value}
                   size="fill"
-                  dimmed={canAct && !discardMode && !options[card.id]?.playable}
+                  dimmed={isDimmed(card)}
                   className={discardMode ? 'ring-2 ring-flame-500/70' : ''}
                   onClick={() => tap(card)}
                 />
@@ -90,7 +122,7 @@ export function PlayerHand({ hand, me, players, canAct, busy, onPlay, onDiscard,
         {hand.length === 0 && <p className="py-6 text-center text-sm text-night-300">Aucune carte en main.</p>}
       </div>
 
-      {/* Choix de la cible (seulement s'il y a plusieurs adversaires possibles) */}
+      {/* Choix de l'adversaire visé (tous les adversaires, les impossibles sont expliqués) */}
       {createPortal(
       <AnimatePresence>
         {targetFor && (
@@ -108,24 +140,47 @@ export function PlayerHand({ hand, me, players, canAct, busy, onPlay, onDiscard,
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-lg justify-self-center rounded-3xl bg-night-800 p-5 ring-1 ring-cream-100/10"
             >
-              <div className="mb-4 text-lg font-extrabold">{CARD_INFO[targetFor.value].label} : qui viser ?</div>
-              <div className="grid gap-2">
-                {options[targetFor.id]?.targets?.map((t) => (
-                  <Button
-                    key={t.id}
-                    variant="secondary"
-                    className="justify-start"
-                    onClick={() => {
-                      onPlay(targetFor.id, t.id)
-                      setTargetFor(null)
-                    }}
-                  >
-                    <span className="size-3 rounded-full" style={{ background: playerColor(t) }} />
-                    {t.name}
-                    <span className="ml-auto font-display text-sm opacity-60">{t.distance}</span>
-                  </Button>
-                ))}
+              <div className="mb-4 flex items-center gap-3">
+                <div className="w-12 shrink-0">
+                  <Card type={targetFor.type} value={targetFor.value} size="fill" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-night-300">Attaque</div>
+                  <div className="text-lg font-extrabold leading-tight">{CARD_INFO[targetFor.value].label} : qui viser ?</div>
+                </div>
               </div>
+              <div className="grid gap-2">
+                {players
+                  .filter((p) => p.id !== me.id)
+                  .map((t) => {
+                    const check = canBeAttacked(t, targetFor.value as AttackValue)
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        disabled={!check.ok}
+                        onClick={() => {
+                          onPlay(targetFor.id, t.id)
+                          setTargetFor(null)
+                        }}
+                        className="flex min-h-14 items-center gap-3 rounded-2xl bg-cream-100 px-4 text-left text-night-900 shadow-[0_4px_0_0_var(--color-cream-300)] transition-transform active:translate-y-[2px] disabled:bg-night-700 disabled:text-night-300 disabled:shadow-none"
+                      >
+                        <span className="size-3.5 shrink-0 rounded-full" style={{ background: playerColor(t) }} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-extrabold">{t.name}</span>
+                          <span className="block text-xs font-bold opacity-70">
+                            {check.ok ? statusLabel(t).label : check.reason}
+                          </span>
+                        </span>
+                        <span className="font-display text-sm opacity-70">{t.distance}</span>
+                        {check.ok && <Crosshair className="size-5 shrink-0 text-flame-500" />}
+                      </button>
+                    )
+                  })}
+              </div>
+              <Button variant="ghost" className="mt-3 w-full" onClick={() => setTargetFor(null)}>
+                Annuler
+              </Button>
             </motion.div>
           </motion.div>
         )}

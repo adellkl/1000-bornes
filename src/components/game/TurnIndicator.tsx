@@ -34,13 +34,14 @@ export function TurnIndicator({ current, pending, players, large }: TurnIndicato
 
   return (
     <div className="relative" aria-live="polite">
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="popLayout" initial={false}>
         <motion.div
           key={key}
-          initial={{ y: -24, opacity: 0, scale: 0.9 }}
+          // Le nouveau tour s'affiche immédiatement (pas d'attente de l'animation de sortie)
+          initial={{ y: -12, opacity: 0, scale: 0.96 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
-          exit={{ y: 24, opacity: 0, scale: 0.95 }}
-          transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+          exit={{ opacity: 0, transition: { duration: 0.08 } }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
           className={`flex items-center justify-center gap-2 rounded-2xl font-extrabold shadow-lg ${tone} ${
             large ? 'px-6 py-3 text-xl 2xl:px-8 2xl:py-4 2xl:text-3xl' : 'px-4 py-2.5 text-sm short:py-1.5'
           }`}

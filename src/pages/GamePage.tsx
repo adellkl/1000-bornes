@@ -95,6 +95,11 @@ export default function GamePage() {
   const game = useGame(code)
   const { state, me, isMyTurn } = game
   const wasMyTurn = useRef(false)
+  // Ciblage « adversaire d'abord » : on touche un adversaire, puis la carte d'attaque
+  const [targetId, setTargetId] = useState<string | null>(null)
+  useEffect(() => {
+    if (!isMyTurn) setTargetId(null)
+  }, [isMyTurn])
 
   // Petite vibration quand c'est à nous
   useEffect(() => {
@@ -108,6 +113,9 @@ export default function GamePage() {
   if (state.room.status === 'lobby') return <Navigate to={`/lobby/${code}`} replace />
 
   const opponents = state.players.filter((p) => !p.is_me)
+  const target = opponents.find((p) => p.id === targetId) ?? null
+  const hasAttack = game.hand.some((c) => c.type === 'attack')
+  const canTarget = isMyTurn && hasAttack
   const pending = state.room.pending_attack
 
   return (
@@ -127,7 +135,10 @@ export default function GamePage() {
               <PlayerStatus player={me} variant="compact" active={isMyTurn} isHost={me.id === state.room.host_player_id} />
             </div>
             <div className="flex flex-col gap-2">
-              <h2 className="px-1 text-xs font-bold uppercase tracking-[0.18em] text-night-300">Adversaires</h2>
+              <h2 className="flex items-baseline justify-between gap-2 px-1 text-xs font-bold uppercase tracking-[0.18em] text-night-300">
+                Adversaires
+                {canTarget && <span className="normal-case tracking-normal text-flame-400">Touchez-en un pour l’attaquer</span>}
+              </h2>
               {opponents.map((p) => (
                 <PlayerStatus
                   key={p.id}
@@ -135,6 +146,8 @@ export default function GamePage() {
                   variant="compact"
                   active={p.id === state.room.current_player_id}
                   isHost={p.id === state.room.host_player_id}
+                  highlight={p.id === targetId}
+                  onClick={canTarget ? () => setTargetId((id) => (id === p.id ? null : p.id)) : undefined}
                 />
               ))}
             </div>
@@ -154,6 +167,8 @@ export default function GamePage() {
         onPlay={game.playCard}
         onDiscard={game.discardCard}
         onHint={game.setActionError}
+        target={target}
+        onClearTarget={() => setTargetId(null)}
       />
 
       <AnimatePresence>

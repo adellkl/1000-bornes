@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { CARD_INFO, TYPE_LABEL } from '../../lib/deck'
+import { CardArt } from './CardArt'
 import type { CardType, CardValue } from '../../types/game'
 
 type Size = 'xs' | 'sm' | 'md' | 'lg' | 'fill'
@@ -35,7 +36,6 @@ const THEMES: Record<CardType, { face: string; ink: string; accent: string }> = 
 export function Card({ type, value, size = 'md', selected, dimmed, onClick, animateIn, className = '' }: CardProps) {
   const info = CARD_INFO[value]
   const theme = THEMES[type]
-  const Icon = info.icon
   const tiny = size === 'xs' || size === 'sm'
   const Comp = onClick ? motion.button : motion.div
 
@@ -63,10 +63,15 @@ export function Card({ type, value, size = 'md', selected, dimmed, onClick, anim
           {!tiny && <span className="mt-[6%] text-[11cqw] font-extrabold uppercase tracking-[0.18em] opacity-60">bornes</span>}
         </span>
       ) : (
-        <span className="relative flex h-full flex-col items-center justify-center gap-[8%] px-[8%]">
-          <Icon className="size-[48cqw]" strokeWidth={2} />
+        <span className="relative flex h-full flex-col items-center justify-between px-[7%] py-[8%]">
           {!tiny && (
-            <span className="text-center text-[12.5cqw] font-extrabold leading-[1.05]">{info.label}</span>
+            <span className="text-[8.5cqw] font-extrabold uppercase leading-none tracking-[0.14em] opacity-80">
+              {TYPE_LABEL[type]}
+            </span>
+          )}
+          <CardArt type={type} value={value} className={tiny ? 'm-auto w-[86%]' : 'w-[72%] drop-shadow-[0_2px_0_rgb(0_0_0/0.25)]'} />
+          {!tiny && (
+            <span className="text-center text-[12.5cqw] font-extrabold leading-[1.05] [text-wrap:balance]">{info.label}</span>
           )}
         </span>
       )}
