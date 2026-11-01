@@ -33,6 +33,7 @@ Visuels de cartes et illustrations originaux (bornes SVG, icônes Lucide) : aucu
 | --- | --- | --- |
 | Front | React 19 + Vite + TypeScript, Tailwind CSS v4, React Router, Framer Motion, Lucide, qrcode.react | — |
 | Données temps réel | **Firebase Firestore** (forfait Spark) | gratuit |
+| Annonce instantanée du tour | **Firebase Realtime Database** (Belgique, forfait Spark) | gratuit |
 | Identité des joueurs | **Firebase Authentication** anonyme (forfait Spark) | gratuit |
 | Logique de jeu (serveur) | **Fonction serverless Vercel** `api/game.ts` + SDK Admin Firebase | gratuit (Hobby) |
 | Hébergement | Vercel | gratuit (Hobby) |
@@ -56,13 +57,13 @@ cp .env.example .env
 
 1. **Créer le projet** sur [console.firebase.google.com](https://console.firebase.google.com). Le forfait Spark gratuit suffit.
 2. **Authentication → Sign-in method → Anonyme → Activer.**
-3. **Firestore Database → Créer une base de données** (région `eur3`).
+3. **Firestore Database → Créer une base de données** (région `eur3`), puis **Realtime Database → Créer une base de données** (Belgique, mode verrouillé). Mettez son URL dans `VITE_FIREBASE_DATABASE_URL`.
 4. **Ajouter une application Web** et recopier sa configuration dans `.env` (`VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`). Ces valeurs sont publiques par nature.
 5. **Déployer les règles de sécurité** :
 
 ```bash
 npx firebase login
-npm run deploy:firebase      # = firebase deploy --only firestore
+npm run deploy:firebase      # = firebase deploy --only firestore,database
 ```
 
 6. **Clé de compte de service** (gratuite) pour la fonction Vercel : *Paramètres du projet → Comptes de service → Générer une nouvelle clé privée*. Puis :
@@ -183,7 +184,10 @@ Téléphone / Écran ──POST /api/game (jeton Firebase)──► Fonction Ver
 - **Validation 100 % serveur** : [`api/_lib/engine.ts`](api/_lib/engine.ts) vérifie le tour, la propriété de la carte, les distances, la limite, les cibles, les bottes et le coup fourré. La fonction contrôle d'abord le jeton Firebase de l'appelant (`verifyIdToken`).
 - **Mains secrètes** : [`firestore.rules`](firestore.rules) ne laisse lire une main qu'à son propriétaire. La pioche, la défausse et la présence sont illisibles.
 - **Aucune écriture client** : toutes les règles d'écriture valent `false`. Seule la fonction (SDK Admin) écrit.
-- **Concurrence** : chaque action est une transaction Firestore.
+- **Concurrence** : chaque action est une transaction Firestore, qui ne réécrit que les documents modifiés.
+- **Latence quasi nulle** : le joueur qui joue annonce aussitôt le joueur suivant via la Realtime Database (`live/{code}/{uid}`). Mesuré en production : le tour s'affiche chez le suivant en 26 à 36 ms. Le serveur reste l'arbitre : l'annonce est annulée si le coup est refusé et expire au bout de 4 s. Un coup joué sur un tour encore « annoncé » part dès la confirmation serveur.
+- **Fonctions à Paris** (`cdg1`), à côté des données, et interface optimiste : la carte jouée quitte la main immédiatement.
+- **Mises à jour** : le service worker de la PWA vérifie les nouvelles versions chaque minute et les applique aussitôt.
 
 ---
 
